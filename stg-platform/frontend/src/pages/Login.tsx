@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, ArrowRight, Lock, Mail, Crosshair } from "lucide-react";
+import { BrandLogo } from "../components/BrandLogo";
 import { useAuth } from "../context/AuthContext";
 
 export function Login() {
@@ -46,15 +47,7 @@ export function Login() {
 
       <div className="relative z-10 w-full max-w-md slide-up">
         <Link to="/" className="mb-10 flex items-center justify-center gap-3">
-          <div className="tactical-edge flex size-12 items-center justify-center border border-[#a855f7]/50 bg-gradient-to-br from-[#a855f7] to-[#84cc16] font-black text-white glow-purple">
-            STG
-          </div>
-          <div>
-            <p className="text-xl font-black uppercase tracking-[0.16em] text-[#f8fafc]">STG</p>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#94a3b8]">
-              Supremo Tribunal Gamer
-            </p>
-          </div>
+          <BrandLogo imageClassName="h-16 w-20" />
         </Link>
 
         <div className="stg-auth-panel stg-hud-panel-glow mb-8 border-[#a855f7]/30 p-8">

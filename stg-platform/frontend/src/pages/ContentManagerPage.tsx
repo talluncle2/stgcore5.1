@@ -3,6 +3,8 @@ import { Layout } from "../components/layout/Layout";
 import { NewsManager } from "../components/admin/NewsManager";
 import { StoreManager } from "../components/admin/StoreManager";
 import { TournamentManager } from "../components/admin/TournamentManager";
+import { HomeManager } from "../components/admin/HomeManager";
+import { RankingManager } from "../components/admin/RankingManager";
 import { useAuth } from "../context/AuthContext";
 import { canManageContent } from "../utils/permissions";
 
@@ -10,6 +12,8 @@ const titles = {
   noticias: "Gestao de Noticias",
   loja: "Gestao da Loja",
   torneios: "Gestao de Torneios",
+  home: "Gestao da Home",
+  ranking: "Gestao de Ranking",
 };
 
 export function ContentManagerPage() {
@@ -36,7 +40,9 @@ export function ContentManagerPage() {
         {section === "noticias" && <NewsManager />}
         {section === "loja" && <StoreManager />}
         {section === "torneios" && <TournamentManager />}
-        {!["noticias", "loja", "torneios"].includes(section || "") && (
+        {section === "home" && <HomeManager />}
+        {section === "ranking" && <RankingManager />}
+        {!["noticias", "loja", "torneios", "home", "ranking"].includes(section || "") && (
           <div className="stg-hud-panel p-6 text-[#94a3b8]">Secao de gestao nao encontrada.</div>
         )}
       </div>

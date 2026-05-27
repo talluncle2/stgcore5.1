@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { ArrowRight, User, Mail, Lock, AlertCircle, Crosshair } from "lucide-react";
+import { BrandLogo } from "../components/BrandLogo";
 
 export function SignUp() {
   const [email, setEmail] = useState("");
@@ -79,11 +80,12 @@ export function SignUp() {
 
       <div className="w-full max-w-md relative z-10">
         {/* Header Logo */}
-        <Link to="/" className="flex items-center justify-center gap-3 mb-12">
-          <div className="w-14 h-14 bg-gradient-to-br from-[#a855f7] to-[#7c3aed] rounded-lg flex items-center justify-center font-black text-white text-xl border-2 border-[#a855f7]/50">
+        <Link to="/" className="mb-12 flex items-center justify-center">
+          <BrandLogo imageClassName="h-16 w-20" />
+          <div className="hidden">
             ⚔️
           </div>
-          <div>
+          <div className="hidden">
             <div className="cod-text-military text-[#a855f7]">STG</div>
             <div className="text-xs text-[#64748b]">Recrutamento Tático</div>
           </div>

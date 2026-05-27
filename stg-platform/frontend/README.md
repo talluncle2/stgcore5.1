@@ -67,5 +67,8 @@ O frontend nao contem backend, bot ou API. A API e o bot rodam no Replit. O fron
 - `/admin/noticias` ou `/configuracoes/noticias`: gestao de noticias e banners.
 - `/admin/loja` ou `/configuracoes/loja`: gestao de itens da loja, precos em STG Coins/BRL e descontos.
 - `/admin/torneios` ou `/configuracoes/torneios`: gestao de torneios/campeonatos.
+- `/admin/home` ou `/configuracoes/home`: gestao do hero principal da Home/Landing.
+- `/admin/ranking` ou `/configuracoes/ranking`: gestao manual/fallback do ranking.
 
 As paginas de gestao exigem admin, moderador ou `can_access_dashboard`. Enquanto endpoints administrativos reais nao estiverem disponiveis na API Replit, os services usam fallback em `localStorage`.
+Criacao e edicao abrem em modal centralizado. Imagens podem ser carregadas do dispositivo e ficam salvas como data URL no fallback local ate existir upload real na API.

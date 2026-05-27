@@ -1,4 +1,5 @@
 import './App.css';
+import { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
@@ -18,8 +19,21 @@ import { AuthCallback } from './pages/AuthCallback';
 import { Community } from './pages/Community';
 import { News } from './pages/News';
 import { ContentManagerPage } from './pages/ContentManagerPage';
+import { LoadingScreen } from './components/LoadingScreen';
 
 function App() {
+  const isLoadingPreviewRoute = window.location.pathname === '/loading-preview';
+  const [showLoader, setShowLoader] = useState(true);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setShowLoader(false), 2200);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  if (isLoadingPreviewRoute || showLoader) {
+    return <LoadingScreen />;
+  }
+
   return (
     <AuthProvider>
       <Router>
@@ -38,6 +52,7 @@ function App() {
           <Route path="/comunidade" element={<Community />} />
           <Route path="/times" element={<Community />} />
           <Route path="/noticias" element={<News />} />
+          <Route path="/loading-preview" element={<LoadingScreen />} />
           <Route
             path="/preview"
             element={

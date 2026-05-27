@@ -16,6 +16,7 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import { getHealth } from "../../services/api";
 import { hasDashboardAccess, hasSettingsAccess } from "../../utils/permissions";
+import { BrandLogo } from "../BrandLogo";
 import { UserMenu } from "./UserMenu";
 
 const publicLinks = [
@@ -116,15 +117,7 @@ export function Topbar() {
           </button>
 
           <Link to="/" className="flex min-w-0 items-center gap-3" onClick={() => setMobileOpen(false)}>
-            <div className="tactical-edge hidden size-9 items-center justify-center border border-[#a855f7]/35 bg-[#111827] text-[#a855f7] sm:flex">
-              <Crosshair size={18} />
-            </div>
-            <div className="min-w-0 max-w-[150px] sm:max-w-[210px] xl:max-w-[180px] 2xl:max-w-[240px]">
-              <p className="tactical-label hidden truncate sm:block">SUPREMO TRIBUNAL GAMER</p>
-              <h1 className="truncate text-left text-lg font-black uppercase tracking-[0.07em] gradient-text sm:text-xl">
-                STG WARZONE
-              </h1>
-            </div>
+            <BrandLogo imageClassName="h-11 w-12" />
           </Link>
         </div>
 

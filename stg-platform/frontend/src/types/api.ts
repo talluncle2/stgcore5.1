@@ -74,6 +74,7 @@ export interface AuthUser {
   id?: string | number;
   discord_id?: string | number;
   discord_username?: string;
+  display_name?: string;
   global_name?: string;
   username?: string;
   email?: string | null;
@@ -82,6 +83,7 @@ export interface AuthUser {
   image_url?: string;
   role?: string;
   roles?: Array<string | number>;
+  role_ids?: Array<string | number>;
   discord_roles?: Array<string | number>;
   guild_roles?: Array<string | number>;
   permissions?: Array<string | number>;
@@ -256,6 +258,44 @@ export interface FeaturedHeroItem {
   actionUrl: string;
   priority: number;
   createdAt: string;
+}
+
+export interface HomeContentItem {
+  id: string;
+  titleLine1: string;
+  titleLine2: string;
+  description: string;
+  backgroundImageUrl?: string;
+  primaryLabel: string;
+  primaryUrl: string;
+  secondaryLabel: string;
+  seasonTitle?: string;
+  missionTitle?: string;
+  missionProgress?: string;
+  isActive: boolean;
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface RankingItem {
+  id: string;
+  playerName: string;
+  nick?: string;
+  avatarUrl?: string;
+  position: number;
+  points: number;
+  wins: number;
+  losses: number;
+  kills: number;
+  deaths: number;
+  kd: number;
+  level: number;
+  badge?: string;
+  isActive: boolean;
+  isFeatured?: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface ModerationConfig {

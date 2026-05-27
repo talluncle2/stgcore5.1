@@ -237,9 +237,11 @@ export function Settings() {
           <div className="cod-text-military mb-4 text-sm text-[#38bdf8]">GESTAO DE CONTEUDO</div>
           <div className="grid gap-3 md:grid-cols-3">
             {[
+              ["Home", "/admin/home"],
               ["Noticias", "/admin/noticias"],
               ["Loja", "/admin/loja"],
               ["Torneios", "/admin/torneios"],
+              ["Ranking", "/admin/ranking"],
             ].map(([label, to]) => (
               <Link key={to} to={to} className="border border-[#a855f7]/25 bg-[#111827]/80 px-4 py-3 text-center text-sm font-black uppercase text-[#c084fc] transition-colors hover:border-[#a855f7]/60 hover:bg-[#a855f7]/15">
                 {label}

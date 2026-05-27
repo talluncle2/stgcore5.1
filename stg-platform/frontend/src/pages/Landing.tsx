@@ -15,11 +15,13 @@ import {
   Users,
   Youtube,
 } from "lucide-react";
+import { BrandLogo } from "../components/BrandLogo";
 import { HeroCarousel } from "../components/HeroCarousel";
 import { UserMenu } from "../components/layout/UserMenu";
 import { useAuth } from "../context/AuthContext";
 import { getFeaturedHeroItems } from "../services/featuredService";
-import { FeaturedHeroItem } from "../types/api";
+import { getActiveHomeContent } from "../services/homeService";
+import { FeaturedHeroItem, HomeContentItem } from "../types/api";
 import { hasDashboardAccess } from "../utils/permissions";
 
 const navItems = [
@@ -53,9 +55,11 @@ export function Landing() {
   const navigate = useNavigate();
   const identity = user ?? profile;
   const [featuredItems, setFeaturedItems] = useState<FeaturedHeroItem[]>([]);
+  const [homeContent, setHomeContent] = useState<HomeContentItem | null>(null);
 
   useEffect(() => {
     void getFeaturedHeroItems().then(setFeaturedItems);
+    void getActiveHomeContent().then(setHomeContent);
   }, []);
 
   const handleArenaEntry = () => {
@@ -75,15 +79,7 @@ export function Landing() {
       <header className="stg-topbar fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-black/78 backdrop-blur-xl">
         <nav className="mx-auto flex h-[70px] max-w-[1840px] items-center px-5 md:px-9">
           <Link to="/" className="stg-brand-panel flex h-full min-w-[250px] items-center gap-4 pr-10">
-            <span className="stg-mark" aria-hidden="true" />
-            <span className="leading-none">
-              <span className="block text-4xl font-black italic tracking-[-0.04em] text-white drop-shadow-[0_0_12px_rgba(168,85,247,0.55)]">
-                STG
-              </span>
-              <span className="mt-1 block text-[9px] font-black uppercase tracking-[0.16em] text-white/70">
-                Supremo Tribunal Gamer
-              </span>
-            </span>
+            <BrandLogo imageClassName="h-14 w-16" />
           </Link>
 
           <div className="hidden h-full flex-1 items-center justify-center gap-2 lg:flex">
@@ -117,7 +113,10 @@ export function Landing() {
       </header>
 
       <section className="relative z-10 min-h-[430px] overflow-hidden pt-[70px] lg:min-h-[410px]">
-        <div className="absolute inset-0 bg-[url('/assets/premium-theme/IMG/COD-HP_Hero_Desktop_XL.webp')] bg-cover bg-[68%_center]" />
+        <div
+          className="absolute inset-0 bg-cover bg-[68%_center]"
+          style={{ backgroundImage: `url('${homeContent?.backgroundImageUrl || "/assets/premium-theme/IMG/COD-HP_Hero_Desktop_XL.webp"}')` }}
+        />
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/30 to-black/60" />
         <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#030305] to-transparent" />
 
@@ -130,20 +129,20 @@ export function Landing() {
           <div className="max-w-[720px] pt-3 lg:pt-7 xl:ml-24">
             <p className="mb-2 text-sm font-black uppercase tracking-[0.18em] text-[#a855f7]">// STG</p>
             <h1 className="stg-hero-title text-[56px] font-black uppercase leading-[0.82] md:text-[78px] lg:text-[96px]">
-              <span className="stg-metal-text block">SUPREMO</span>
-              <span className="stg-purple-text block">TRIBUNAL GAMER</span>
+              <span className="stg-metal-text block">{homeContent?.titleLine1 || "SUPREMO"}</span>
+              <span className="stg-purple-text block">{homeContent?.titleLine2 || "TRIBUNAL GAMER"}</span>
             </h1>
             <p className="mt-5 max-w-[560px] text-lg font-medium text-white/78">
-              Domine o campo digital com a tropa de elite da STG.
+              {homeContent?.description || "Domine o campo digital com a tropa de elite da STG."}
             </p>
 
             <div className="mt-6 flex flex-wrap gap-4">
-              <Link to="/torneios" className="stg-primary-cta">
-                VER TORNEIOS
+              <Link to={homeContent?.primaryUrl || "/torneios"} className="stg-primary-cta">
+                {homeContent?.primaryLabel || "VER TORNEIOS"}
                 <ChevronRight size={18} />
               </Link>
               <button type="button" onClick={handleArenaEntry} className="stg-secondary-cta">
-                ENTRAR NA ARENA
+                {homeContent?.secondaryLabel || "ENTRAR NA ARENA"}
                 <ChevronRight size={18} />
               </button>
             </div>
@@ -153,14 +152,16 @@ export function Landing() {
             <div className="stg-season-panel w-full p-7">
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/45">OPERACAO ATIVA</p>
               <div className="mt-1 flex items-center justify-between">
-                <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-[#a855f7]">TEMPORADA 2024</h2>
+                <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-[#a855f7]">
+                  {homeContent?.seasonTitle || "TEMPORADA 2024"}
+                </h2>
                 <Trophy className="text-[#c084fc]" size={21} />
               </div>
               <div className="mt-7 border-t border-white/10 pt-5">
                 <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/45">MISSAO DA SEMANA</p>
                 <div className="mt-3 flex items-center justify-between text-sm text-white/80">
-                  <span>Venca 5 partidas ranqueadas</span>
-                  <span>3 / 5</span>
+                  <span>{homeContent?.missionTitle || "Venca 5 partidas ranqueadas"}</span>
+                  <span>{homeContent?.missionProgress || "3 / 5"}</span>
                 </div>
                 <div className="mt-4 h-1.5 overflow-hidden bg-white/10">
                   <div className="h-full w-3/5 bg-gradient-to-r from-[#7c3aed] to-[#c084fc]" />
@@ -225,9 +226,7 @@ export function Landing() {
         </div>
 
         <footer className="stg-footer mt-3 grid items-center gap-6 p-4 md:grid-cols-[200px_1fr_auto] md:px-24">
-          <div className="text-5xl font-black italic tracking-[-0.06em] text-white drop-shadow-[0_0_14px_rgba(168,85,247,0.6)]">
-            STG
-          </div>
+          <BrandLogo imageClassName="h-16 w-20" showText={false} />
           <div>
             <p className="text-xl font-black uppercase tracking-[0.08em] text-[#a855f7]">FACA PARTE DA COMUNIDADE STG</p>
             <p className="mt-1 text-sm text-white/72">Conecte-se, evolua e conquiste. Juntos somos imparaveis.</p>

@@ -14,7 +14,7 @@ export type Profile = {
   discord_id?: string;
   avatar_url?: string;
   discord_avatar_url?: string;
-  role: "user" | "admin" | "moderator";
+  role: "user" | "admin" | "moderator" | "staff";
   xp: number;
   level: number;
   coins: number;

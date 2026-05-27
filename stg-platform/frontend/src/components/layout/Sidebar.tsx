@@ -16,6 +16,7 @@ import {
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { hasDashboardAccess } from "../../utils/permissions";
+import { BrandLogo } from "../BrandLogo";
 import { SidebarUserSection } from "./SidebarUserSection";
 
 const mainNavigation = [
@@ -88,15 +89,7 @@ export function Sidebar() {
       >
         <div className="border-b border-[#a855f7]/20 p-6">
           <Link to="/" className="flex items-center gap-3">
-            <div className="stg-mark-small tactical-edge flex size-10 items-center justify-center border border-[#a855f7]/45 bg-gradient-to-br from-[#a855f7] to-[#4c1d95] font-black text-white shadow-lg shadow-[#a855f7]/15 glow-purple">
-              STG
-            </div>
-            <div className="text-xs leading-tight">
-              <div className="font-black uppercase tracking-[0.18em] text-[#f8fafc]">STG</div>
-              <div className="text-[10px] uppercase tracking-[0.12em] text-[#94a3b8]">
-                Tribunal Gamer
-              </div>
-            </div>
+            <BrandLogo imageClassName="h-12 w-12" compactText />
           </Link>
         </div>
 
