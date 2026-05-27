@@ -1,12 +1,9 @@
 import { useEffect, useState } from "react";
-import { Edit3, Medal, Search } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Medal, Search } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { RankingCard } from "../components/cards/RankingCard";
-import { useAuth } from "../context/AuthContext";
 import { getRankingItems, rankingItemToEntry } from "../services/rankingService";
 import { RankingEntry, RankingItem } from "../types/api";
-import { canManageContent } from "../utils/permissions";
 
 export function Ranking() {
   const [ranking, setRanking] = useState<RankingEntry[]>([]);
@@ -14,7 +11,6 @@ export function Ranking() {
   const [filteredRanking, setFilteredRanking] = useState<RankingEntry[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const { user, profile } = useAuth();
 
   useEffect(() => {
     async function loadRanking() {
@@ -68,12 +64,6 @@ export function Ranking() {
             </h1>
             <p className="text-[#94a3b8]">Veja a posicao de todos os operadores da comunidade</p>
           </div>
-          {canManageContent(user ?? profile) && (
-            <Link to="/configuracoes?tab=ranking" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
-              <Edit3 size={16} />
-              Gerir ranking
-            </Link>
-          )}
         </div>
 
         <div className="relative">

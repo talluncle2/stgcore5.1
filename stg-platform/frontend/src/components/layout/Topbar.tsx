@@ -8,7 +8,6 @@ import {
   Menu,
   Newspaper,
   Radio,
-  ShieldCheck,
   ShoppingCart,
   Trophy,
   Users,
@@ -16,7 +15,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { getHealth } from "../../services/api";
-import { hasDashboardAccess, hasSettingsAccess } from "../../utils/permissions";
 import { BrandLogo } from "../BrandLogo";
 import { UserMenu } from "./UserMenu";
 
@@ -41,20 +39,7 @@ export function Topbar() {
   const [apiLoading, setApiLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
-  const { user, profile, isAuthenticated, loginWithDiscord } = useAuth();
-
-  const identity = user ?? profile;
-  const canOpenDashboard = hasDashboardAccess(identity);
-  const canOpenSettings = hasSettingsAccess(identity);
-  const adminLinks: NavItem[] = canOpenDashboard
-    ? [
-        { label: "Dashboard", path: "/dashboard", icon: Gauge },
-        { label: "Moderacao", path: "/moderation", icon: ShieldCheck },
-        ...(canOpenSettings
-          ? [{ label: "Configuracoes", path: "/configuracoes?tab=loja", icon: ShieldCheck }]
-          : []),
-      ]
-    : [];
+  const { isAuthenticated, loginWithDiscord } = useAuth();
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -73,8 +58,8 @@ export function Topbar() {
     return () => clearInterval(interval);
   }, []);
 
-  const mainCompactLinks = [...publicLinks.slice(0, 4), ...adminLinks.slice(0, 2)];
-  const moreLinks = [...publicLinks.slice(4), ...adminLinks.slice(2)];
+  const mainCompactLinks = publicLinks.slice(0, 5);
+  const moreLinks = publicLinks.slice(5);
 
   function renderLink(item: NavItem, compact = false, iconOnly = false) {
     const Icon = item.icon;
@@ -124,8 +109,6 @@ export function Topbar() {
 
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 2xl:flex">
           {publicLinks.map((item) => renderLink(item))}
-          {adminLinks.length > 0 && <span className="mx-1 h-7 border-l border-[#a855f7]/20" />}
-          {adminLinks.map((item) => renderLink(item))}
         </nav>
 
         <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex 2xl:hidden">
@@ -197,8 +180,6 @@ export function Topbar() {
         <div className="border-t border-[#a855f7]/20 bg-[#050608]/98 px-3 py-3 shadow-xl shadow-black/40 lg:hidden">
           <div className="grid gap-2">
             {publicLinks.map((item) => renderLink(item, true))}
-            {adminLinks.length > 0 && <div className="my-1 border-t border-[#a855f7]/20" />}
-            {adminLinks.map((item) => renderLink(item, true))}
           </div>
           <div className="mt-3 flex items-center gap-2 border border-[#84cc16]/20 bg-[#111827]/75 px-3 py-2">
             <Circle

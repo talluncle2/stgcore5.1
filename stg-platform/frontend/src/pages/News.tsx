@@ -1,18 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-import { Edit3, Newspaper, Search } from "lucide-react";
+import { Newspaper, Search } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { NewsCarouselSection } from "../components/NewsCarouselSection";
-import { useAuth } from "../context/AuthContext";
 import { getNewsItems } from "../services/newsService";
 import { NewsItem } from "../types/api";
-import { canManageContent } from "../utils/permissions";
 
 export function News() {
   const [items, setItems] = useState<NewsItem[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
-  const { user, profile } = useAuth();
 
   useEffect(() => {
     async function load() {
@@ -47,7 +43,7 @@ export function News() {
             </p>
           </div>
           <div className="flex flex-col gap-2 md:flex-row md:items-center">
-            <div className="relative min-w-0 md:w-80">
+            <div className="relative min-w-0 md:w-96">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
               <input
                 value={query}
@@ -56,12 +52,6 @@ export function News() {
                 className="w-full border border-[#a855f7]/20 bg-[#111827] py-3 pl-10 pr-4 text-sm font-bold text-white outline-none placeholder:text-[#64748b] focus:border-[#a855f7]/55"
               />
             </div>
-            {canManageContent(user ?? profile) && (
-              <Link to="/configuracoes?tab=noticias" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
-                <Edit3 size={16} />
-                Gerir
-              </Link>
-            )}
           </div>
         </div>
 

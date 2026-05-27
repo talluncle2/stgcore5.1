@@ -1,12 +1,9 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   Crosshair,
-  Gauge,
   Home,
   LogIn,
   Menu,
-  Settings,
-  Shield,
   ShoppingCart,
   Radio,
   Trophy,
@@ -15,7 +12,6 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { hasDashboardAccess } from "../../utils/permissions";
 import { BrandLogo } from "../BrandLogo";
 import { SidebarUserSection } from "./SidebarUserSection";
 
@@ -32,12 +28,6 @@ const authNavigation = [
   { name: "Meu Perfil", path: "/profile", icon: Users },
 ];
 
-const adminNavigation = [
-  { name: "Dashboard", path: "/dashboard", icon: Gauge },
-  { name: "Moderacao", path: "/moderation", icon: Shield },
-  { name: "Configuracoes", path: "/configuracoes?tab=loja", icon: Settings },
-];
-
 type NavigationItem = {
   name: string;
   path: string;
@@ -47,8 +37,7 @@ type NavigationItem = {
 export function Sidebar() {
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const { user, profile, isAuthenticated } = useAuth();
-  const canOpenDashboard = hasDashboardAccess(user ?? profile);
+  const { isAuthenticated } = useAuth();
 
   const renderItem = (item: NavigationItem, tone: "default" | "admin" = "default") => {
     const Icon = item.icon;
@@ -110,14 +99,6 @@ export function Sidebar() {
             </>
           )}
 
-          {isAuthenticated && canOpenDashboard && (
-            <>
-              <div className="pb-2 pt-4">
-                <p className="px-4 text-xs font-black uppercase tracking-[0.16em] text-[#84cc16]">Administracao</p>
-              </div>
-              {adminNavigation.map((item) => renderItem(item, "admin"))}
-            </>
-          )}
         </nav>
 
         <div className="border-t border-[#a855f7]/20 p-4">

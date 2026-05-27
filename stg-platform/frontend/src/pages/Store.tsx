@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Edit3, Filter, Package, ShoppingCart } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Filter, Package, ShoppingCart } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
-import { useAuth } from "../context/AuthContext";
 import { getStoreItems } from "../services/storeService";
 import { StoreItem } from "../types/api";
-import { canManageContent } from "../utils/permissions";
 
 function formatBrl(value?: number) {
   if (!value) return null;
@@ -26,7 +23,6 @@ export function Store() {
   const [products, setProducts] = useState<StoreItem[]>([]);
   const [category, setCategory] = useState("todos");
   const [loading, setLoading] = useState(true);
-  const { user, profile } = useAuth();
 
   useEffect(() => {
     async function loadProducts() {
@@ -54,12 +50,6 @@ export function Store() {
             </h1>
             <p className="text-[#94a3b8]">Itens com economia hibrida em STG Coins e BRL.</p>
           </div>
-          {canManageContent(user ?? profile) && (
-            <Link to="/configuracoes?tab=loja" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
-              <Edit3 size={16} />
-              Gerir loja
-            </Link>
-          )}
         </div>
 
         <div className="flex flex-wrap gap-2">

@@ -1,11 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Calendar, Edit3, Filter, Trophy } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Calendar, Filter, Trophy } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
-import { useAuth } from "../context/AuthContext";
 import { getTournamentItems } from "../services/tournamentsService";
 import { TournamentItem } from "../types/api";
-import { canManageContent } from "../utils/permissions";
 
 function formatDate(value?: string) {
   if (!value) return "A definir";
@@ -30,7 +27,6 @@ export function Tournaments() {
   const [tournaments, setTournaments] = useState<TournamentItem[]>([]);
   const [status, setStatus] = useState("todos");
   const [loading, setLoading] = useState(true);
-  const { user, profile } = useAuth();
 
   useEffect(() => {
     async function loadTournaments() {
@@ -63,12 +59,6 @@ export function Tournaments() {
             </h1>
             <p className="text-[#94a3b8]">Acompanhe temporadas, torneios e chamadas competitivas da STG.</p>
           </div>
-          {canManageContent(user ?? profile) && (
-            <Link to="/configuracoes?tab=campeonatos" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
-              <Edit3 size={16} />
-              Gerir torneios
-            </Link>
-          )}
         </div>
 
         <div className="flex flex-wrap gap-2">
