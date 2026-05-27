@@ -1,0 +1,121 @@
+Corrija o erro de publicação do Replit:
+
+Erro atual:
+"Could not find run command"
+"failed to publish"
+"There was an issue publishing your artifact"
+"usually caused by a build command error"
+
+Contexto:
+O projeto STG contém:
+- frontend React/Vite
+- API FastAPI
+- bot Discord
+
+Objetivo:
+Configurar corretamente os comandos de execução/build para o Replit conseguir rodar e publicar o site.
+
+FASE 1 — ANALISAR ESTRUTURA
+
+Antes de alterar, localizar:
+
+1. Onde está o package.json do frontend.
+2. Onde está index.html.
+3. Onde está src/main.tsx.
+4. Onde está vite.config.ts.
+5. Onde está a API FastAPI.
+6. Onde está o bot.
+7. Se existe arquivo .replit.
+8. Se existe run.py.
+9. Se package.json tem scripts dev/build/preview.
+
+FASE 2 — CORRIGIR FRONTEND
+
+Se o frontend estiver na raiz, garantir package.json com:
+
+"scripts": {
+  "dev": "vite --host 0.0.0.0 --port 3000",
+  "build": "vite build",
+  "preview": "vite preview --host 0.0.0.0 --port 3000"
+}
+
+Se o frontend estiver em /frontend, garantir frontend/package.json com:
+
+"scripts": {
+  "dev": "vite --host 0.0.0.0 --port 3000",
+  "build": "vite build",
+  "preview": "vite preview --host 0.0.0.0 --port 3000"
+}
+
+FASE 3 — CRIAR/ARRUMAR .REPLIT
+
+Criar ou corrigir o arquivo .replit na raiz.
+
+Se o frontend estiver na raiz, usar:
+
+run = "npm run dev"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "npm install && npm run build && npm run preview -- --host 0.0.0.0 --port 3000"]
+deploymentTarget = "cloudrun"
+
+Se o frontend estiver em /frontend, usar:
+
+run = "cd frontend && npm run dev -- --host 0.0.0.0 --port 3000"
+
+[nix]
+channel = "stable-24_05"
+
+[deployment]
+run = ["sh", "-c", "cd frontend && npm install && npm run build && npm run preview -- --host 0.0.0.0 --port 3000"]
+deploymentTarget = "cloudrun"
+
+FASE 4 — VARIÁVEIS
+
+Garantir que o frontend tenha .env ou .env.example com:
+
+VITE_API_BASE_URL=https://URL-DA-API
+VITE_REQUIRE_AUTH=false
+VITE_SUPABASE_REDIRECT_URL=https://URL-DO-SITE/auth/callback
+
+Não usar localhost:3000 em produção.
+
+FASE 5 — NÃO QUEBRAR BOT/API
+
+Não remover:
+- bot/
+- core/
+- rotas FastAPI
+- arquivos do Discord bot
+
+Não alterar token do bot.
+Não expor BOT_API_KEY no frontend.
+
+FASE 6 — TESTAR
+
+Rodar:
+
+npm install
+npm run build
+npm run dev
+
+Se o frontend estiver em /frontend:
+
+cd frontend
+npm install
+npm run build
+npm run dev -- --host 0.0.0.0 --port 3000
+
+Corrigir qualquer erro até o build passar.
+
+FASE 7 — RELATÓRIO
+
+Ao final, informar:
+1. Onde está o frontend.
+2. Qual comando roda o site.
+3. Qual comando faz build.
+4. Qual arquivo .replit foi criado/corrigido.
+5. Como publicar novamente.

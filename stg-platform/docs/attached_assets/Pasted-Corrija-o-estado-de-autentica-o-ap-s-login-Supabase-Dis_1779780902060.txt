@@ -1,0 +1,250 @@
+Corrija o estado de autenticação após login Supabase/Discord.
+
+Problema atual:
+O login com Discord via Supabase conclui com sucesso.
+O usuário é redirecionado para /home.
+Porém a navbar não muda:
+- continua mostrando botão "Conectar-se"
+- não mostra ícone/avatar do usuário
+- não mostra menu de perfil
+- não mostra opção Dashboard para usuários com permissão
+
+Objetivo:
+Após login bem-sucedido, o frontend deve reconhecer a sessão Supabase ativa e atualizar a navbar imediatamente.
+
+Arquitetura:
+- Frontend React/Vite
+- Supabase Auth com Discord
+- React Router
+- AuthContext ou contexto equivalente já existe
+- Navbar/Topbar já existe
+- Dashboard só deve aparecer para admin/mod/staff
+
+FASE 1 — AUDITORIA
+
+Analise:
+- src/context/AuthContext.tsx
+- src/lib/supabase.ts
+- src/pages/AuthCallback.tsx
+- src/pages/Login.tsx
+- src/components/Navbar.tsx
+- src/components/layout/*
+- src/components/auth/ProtectedRoute.tsx
+- src/utils/permissions.ts, se existir
+- App.tsx ou arquivo de rotas
+
+Procure por:
+- getSession()
+- onAuthStateChange()
+- setUser()
+- setSession()
+- signInWithOAuth()
+- signOut()
+- redirectTo
+- user metadata
+- avatar_url
+- full_name
+- provider_token
+- roles
+- Dashboard button
+- Conectar-se button
+
+FASE 2 — CORRIGIR AUTHCONTEXT
+
+Garantir que AuthContext:
+
+1. Ao iniciar o app, chame:
+
+supabase.auth.getSession()
+
+2. Salve:
+- session
+- user
+- loading
+
+3. Registre listener:
+
+supabase.auth.onAuthStateChange((event, session) => {
+  setSession(session)
+  setUser(session?.user ?? null)
+})
+
+4. Remova o listener no cleanup.
+
+5. Exponha no contexto:
+- user
+- session
+- loading
+- isAuthenticated
+- signOut
+- refreshUser
+
+6. Não quebrar se Supabase env estiver ausente.
+7. Se VITE_REQUIRE_AUTH=false, ainda assim deve detectar sessão real se existir.
+
+FASE 3 — CORRIGIR AUTH CALLBACK
+
+Em src/pages/AuthCallback.tsx:
+
+1. Mostrar loading: "Autenticando..."
+2. Chamar supabase.auth.getSession()
+3. Aguardar a sessão estar disponível
+4. Se session existir:
+   - atualizar AuthContext se necessário
+   - redirecionar para /home
+5. Se não existir sessão:
+   - tentar aguardar brevemente
+   - se falhar, redirecionar para /login com erro amigável
+
+Não redirecionar para /dashboard automaticamente.
+
+FASE 4 — CORRIGIR NAVBAR
+
+A Navbar deve usar o AuthContext.
+
+Se loading:
+- mostrar estado carregando discreto
+
+Se !user:
+- mostrar botão "Conectar-se"
+
+Se user:
+- esconder botão "Conectar-se"
+- mostrar ícone/avatar do usuário
+- mostrar menu de perfil com:
+  - Meu Perfil
+  - Loja
+  - Torneios
+  - Sair
+
+Se hasDashboardAccess(user) for true, adicionar:
+  - Dashboard
+  - Admin, se existir
+  - Moderação, se existir
+
+Usar dados possíveis do Supabase:
+- user.email
+- user.user_metadata.full_name
+- user.user_metadata.name
+- user.user_metadata.avatar_url
+- user.user_metadata.picture
+- user.user_metadata.provider_id
+- user.app_metadata
+
+FASE 5 — PERMISSÃO DASHBOARD
+
+Criar ou corrigir:
+
+src/utils/permissions.ts
+
+Com:
+
+const DASHBOARD_ALLOWED_ROLES = [
+  "admin",
+  "administrator",
+  "moderador",
+  "moderator",
+  "staff",
+  "infraestrutura",
+  "esportes",
+  "financeiro",
+  "marketing"
+]
+
+Função:
+
+hasDashboardAccess(user)
+
+Ela deve verificar com segurança:
+- user.user_metadata.roles
+- user.user_metadata.discord_roles
+- user.user_metadata.guild_roles
+- user.app_metadata.roles
+- user.app_metadata.role
+- user.role
+- user.roles
+- user.is_admin
+- user.is_staff
+- user.is_moderator
+
+Se não houver cargos ainda, retornar false.
+
+Não mostrar Dashboard para usuário comum.
+
+FASE 6 — LOGIN PAGE
+
+Na página de login:
+
+Depois de clicar em "Entrar com Discord", usar:
+
+const redirectTo =
+  import.meta.env.VITE_SUPABASE_REDIRECT_URL ||
+  `${window.location.origin}/auth/callback`
+
+await supabase.auth.signInWithOAuth({
+  provider: "discord",
+  options: {
+    redirectTo
+  }
+})
+
+FASE 7 — SIGN OUT
+
+Implementar logout no menu de perfil:
+
+await supabase.auth.signOut()
+
+Depois:
+- limpar user/session no AuthContext
+- redirecionar para /home
+- navbar volta a mostrar "Conectar-se"
+
+FASE 8 — NÃO QUEBRAR
+
+Não remover Supabase.
+Não recriar backend.
+Não recriar bot.
+Não expor BOT_API_KEY.
+Não remover páginas existentes.
+Não redirecionar admin automaticamente para dashboard.
+Todos os usuários logados continuam indo para /home.
+Dashboard aparece apenas como opção no menu de perfil se permitido.
+
+FASE 9 — TESTES
+
+Testar:
+
+1. Abrir site deslogado:
+   - navbar mostra "Conectar-se"
+
+2. Fazer login Discord:
+   - retorna para /auth/callback
+   - vai para /home
+   - navbar muda para avatar/perfil
+
+3. Abrir menu de perfil:
+   - mostra Meu Perfil, Loja, Torneios, Sair
+
+4. Usuário comum:
+   - não mostra Dashboard
+
+5. Usuário admin/mod/staff:
+   - mostra Dashboard no menu
+
+6. Logout:
+   - volta para /home
+   - navbar volta para "Conectar-se"
+
+7. Rodar:
+npm run build
+
+Corrigir qualquer erro de TypeScript/Vite.
+
+FASE 10 — RELATÓRIO
+
+Ao terminar, listar:
+- arquivos alterados
+- como AuthContext foi corrigido
+- como Navbar detecta login
+- como Dashboard é liberado por cargo
+- como testar login/logout

@@ -1,0 +1,219 @@
+Corrija definitivamente o erro 404 em /auth/callback após login Supabase/Discord.
+
+Situação atual:
+O login Discord/Supabase funciona e retorna para:
+
+https://stg-main-20-zipzip--duquesadrago.replit.app/auth/callback?code=...
+
+Mas o Replit mostra HTTP ERROR 404 dizendo que não encontrou /auth/callback.
+
+Objetivo:
+Fazer o React/Vite aceitar a rota /auth/callback e fazer o servidor entregar index.html para rotas internas do React.
+
+FASE 1 — AUDITORIA
+
+Verifique:
+- package.json
+- index.html
+- src/main.tsx
+- src/App.tsx
+- src/pages/AuthCallback.tsx
+- src/context/AuthContext.tsx
+- src/lib/supabase.ts
+- server.js, se existir
+- .replit
+- vite.config.ts
+
+FASE 2 — CRIAR ROTA REACT
+
+Se não existir, criar:
+
+src/pages/AuthCallback.tsx
+
+Com comportamento:
+1. Mostrar "Autenticando com Discord..."
+2. Usar Supabase para recuperar a sessão
+3. Se houver sessão, redirecionar para /home
+4. Se não houver sessão, tentar exchangeCodeForSession se houver code na URL
+5. Se falhar, redirecionar para /login
+6. Nunca redirecionar para /dashboard automaticamente
+
+Implementar algo compatível com Supabase v2:
+
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/lib/supabase";
+
+export default function AuthCallback() {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    async function handleCallback() {
+      try {
+        const url = new URL(window.location.href);
+        const code = url.searchParams.get("code");
+
+        if (code) {
+          await supabase.auth.exchangeCodeForSession(code);
+        }
+
+        const { data } = await supabase.auth.getSession();
+
+        if (data.session) {
+          navigate("/home", { replace: true });
+        } else {
+          navigate("/login", { replace: true });
+        }
+      } catch (error) {
+        console.error("Erro no callback OAuth:", error);
+        navigate("/login", { replace: true });
+      }
+    }
+
+    handleCallback();
+  }, [navigate]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold">Autenticando com Discord...</h1>
+        <p className="text-slate-400 mt-2">Aguarde enquanto validamos seu acesso STG.</p>
+      </div>
+    </div>
+  );
+}
+
+Se o projeto não usa alias @, ajustar o import para o caminho correto, por exemplo:
+import { supabase } from "../lib/supabase";
+
+FASE 3 — ADICIONAR ROTA NO APP
+
+Em src/App.tsx ou arquivo de rotas, garantir:
+
+<Route path="/auth/callback" element={<AuthCallback />} />
+
+Também garantir:
+<Route path="/" element={<Home />} />
+<Route path="/home" element={<Home />} />
+<Route path="/login" element={<Login />} />
+
+FASE 4 — CONFIGURAR FALLBACK SPA
+
+Criar server.js na raiz do frontend, ou na raiz do projeto se o frontend estiver nela.
+
+server.js:
+
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const distPath = path.join(__dirname, "dist");
+
+app.use(express.static(distPath));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(distPath, "index.html"));
+});
+
+const port = process.env.PORT || 3000;
+
+app.listen(port, "0.0.0.0", () => {
+  console.log(`STG frontend rodando em http://0.0.0.0:${port}`);
+});
+
+FASE 5 — AJUSTAR PACKAGE.JSON
+
+Garantir package.json com:
+
+"type": "module",
+
+"scripts": {
+  "dev": "vite --host 0.0.0.0 --port 3000",
+  "build": "vite build",
+  "preview": "vite preview --host 0.0.0.0 --port 3000",
+  "start": "node server.js"
+}
+
+Adicionar express se não existir:
+
+npm install express
+
+FASE 6 — AJUSTAR .REPLIT
+
+Se este Replit está rodando o frontend principal, configurar:
+
+run = "npm run dev"
+
+E para deploy/publicação, garantir que ele rode:
+
+npm install && npm run build && npm run start
+
+Se houver configuração [deployment], ajustar para:
+
+[deployment]
+run = ["sh", "-c", "npm install && npm run build && npm run start"]
+deploymentTarget = "cloudrun"
+
+FASE 7 — SUPABASE REDIRECT
+
+Garantir .env:
+
+VITE_SUPABASE_REDIRECT_URL=https://stg-main-20-zipzip--duquesadrago.replit.app/auth/callback
+VITE_FRONTEND_URL=https://stg-main-20-zipzip--duquesadrago.replit.app
+VITE_REQUIRE_AUTH=false
+
+No login, garantir:
+
+const redirectTo =
+  import.meta.env.VITE_SUPABASE_REDIRECT_URL ||
+  `${window.location.origin}/auth/callback`;
+
+await supabase.auth.signInWithOAuth({
+  provider: "discord",
+  options: {
+    redirectTo,
+    scopes: "identify email guilds guilds.members.read"
+  }
+});
+
+FASE 8 — TESTES
+
+Rodar:
+
+npm install
+npm run build
+npm run dev
+
+Testar manualmente:
+1. /
+2. /home
+3. /login
+4. /auth/callback
+
+A rota /auth/callback não pode mais dar 404.
+
+Depois testar login Discord/Supabase.
+
+FASE 9 — NÃO QUEBRAR
+
+Não remover Supabase.
+Não recriar backend.
+Não recriar bot.
+Não expor BOT_API_KEY.
+Não remover Dashboard.
+Não redirecionar automaticamente para Dashboard.
+Após login, usuário deve ir para /home.
+
+FASE 10 — RELATÓRIO
+
+Ao final, informar:
+- arquivos criados
+- arquivos alterados
+- se /auth/callback foi criado
+- se server.js foi criado
+- comando correto para rodar
+- comando correto para publicar

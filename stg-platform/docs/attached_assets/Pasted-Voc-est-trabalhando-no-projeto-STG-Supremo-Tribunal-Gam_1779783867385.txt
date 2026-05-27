@@ -1,0 +1,516 @@
+Você está trabalhando no projeto STG | Supremo Tribunal Gamer.
+
+OBJETIVO:
+Migrar o sistema de autenticação para login direto com Discord OAuth2 usando a API FastAPI do projeto, sem depender do Supabase Auth como fluxo principal.
+
+Arquitetura desejada:
+
+Frontend React/Vite
+↓
+API FastAPI
+↓
+Discord OAuth2
+↓
+API gera JWT/sessão
+↓
+Frontend recebe token
+↓
+Navbar mostra perfil do usuário
+↓
+Dashboard aparece apenas para admin/mod/staff
+
+IMPORTANTE:
+- NÃO recriar o projeto.
+- NÃO apagar o bot.
+- NÃO apagar a API.
+- NÃO apagar o frontend.
+- NÃO remover Supabase completamente; apenas deixar opcional/inativo para login.
+- NÃO expor DISCORD_CLIENT_SECRET no frontend.
+- NÃO expor BOT_API_KEY no frontend.
+- NÃO usar URL OAuth gigante manual no frontend.
+- NÃO usar Supabase Auth como login principal.
+- NÃO redirecionar usuário automaticamente para Dashboard.
+- Após login, todos os usuários devem ir para /home.
+- Dashboard só aparece no menu de perfil se o usuário tiver permissão.
+
+URL atual do frontend:
+https://stg-main-20-zipzip--duquesadrago.replit.app
+
+FASE 1 — AUDITORIA
+
+Antes de alterar, analise:
+
+Frontend:
+- src/context/AuthContext.tsx
+- src/pages/Login.tsx
+- src/pages/AuthCallback.tsx
+- src/components/Navbar.tsx
+- src/components/UserMenu.tsx
+- src/components/auth/ProtectedRoute.tsx
+- src/utils/permissions.ts
+- src/services/api.ts
+- src/lib/supabase.ts
+- src/App.tsx
+- vite.config.ts
+- package.json
+
+Backend:
+- core/main.py
+- core/routes/auth.py
+- core/utils/auth.py
+- core/models/user.py
+- core/models/base.py
+- core/routes/users.py
+
+Bot:
+- bot/main.py
+- bot/api_client.py
+- bot/config.py
+
+Gere um breve relatório antes de aplicar as mudanças.
+
+FASE 2 — CONFIGURAÇÕES DE AMBIENTE
+
+Criar/ajustar variáveis no backend:
+
+DISCORD_CLIENT_ID=1456066330469073075
+DISCORD_CLIENT_SECRET=USAR_REPLIT_SECRETS
+DISCORD_REDIRECT_URI=https://stg-main-20-zipzip--duquesadrago.replit.app/auth/discord/callback
+FRONTEND_URL=https://stg-main-20-zipzip--duquesadrago.replit.app
+JWT_SECRET_KEY=USAR_REPLIT_SECRETS_OU_FALLBACK_DEV
+GUILD_ID=1447686160276127846
+
+No frontend:
+
+VITE_API_BASE_URL=https://stg-main-20-zipzip--duquesadrago.replit.app
+VITE_REQUIRE_AUTH=false
+
+Importante:
+- DISCORD_CLIENT_SECRET nunca deve ir para arquivos do frontend.
+- BOT_API_KEY nunca deve ir para arquivos do frontend.
+- Supabase pode continuar nos arquivos, mas não deve ser usado como login principal.
+
+FASE 3 — ROTAS FASTAPI PARA DISCORD OAUTH
+
+Criar ou ajustar em core/routes/auth.py as rotas:
+
+GET /auth/discord/login
+
+Essa rota deve:
+1. Montar a URL oficial do Discord OAuth2.
+2. Usar:
+   - client_id = DISCORD_CLIENT_ID
+   - redirect_uri = DISCORD_REDIRECT_URI
+   - response_type = code
+   - scope = identify email guilds guilds.members.read
+3. Redirecionar o usuário para o Discord.
+
+GET /auth/discord/callback
+
+Essa rota deve:
+1. Receber ?code=...
+2. Trocar o code por access_token em:
+   https://discord.com/api/oauth2/token
+3. Buscar dados do usuário em:
+   https://discord.com/api/users/@me
+4. Se possível, buscar dados do membro no servidor STG:
+   https://discord.com/api/users/@me/guilds/{GUILD_ID}/member
+5. Identificar roles/cargos.
+6. Criar ou atualizar usuário no banco, se os models existirem.
+7. Gerar JWT próprio da API.
+8. Redirecionar para:
+
+FRONTEND_URL + "/auth/callback?token=JWT"
+
+GET /auth/me
+
+Essa rota deve:
+1. Ler Authorization: Bearer TOKEN
+2. Validar o JWT
+3. Retornar dados do usuário:
+
+{
+  "discord_id": "...",
+  "username": "...",
+  "global_name": "...",
+  "email": "...",
+  "avatar_url": "...",
+  "roles": [],
+  "role_ids": [],
+  "is_admin": false,
+  "is_staff": false,
+  "is_moderator": false,
+  "can_access_dashboard": false
+}
+
+POST /auth/logout
+
+Pode retornar:
+
+{
+  "success": true
+}
+
+FASE 4 — JWT
+
+Criar ou ajustar funções JWT no backend.
+
+Funções necessárias:
+- create_access_token(data)
+- decode_access_token(token)
+- get_current_discord_user()
+
+O token deve conter:
+- discord_id
+- username
+- email
+- roles
+- role_ids
+- can_access_dashboard
+- expiração
+
+Usar JWT_SECRET_KEY.
+
+Se PyJWT já existir, usar PyJWT.
+Se já houver utilitário JWT no projeto, reutilizar sem quebrar rotas existentes.
+
+FASE 5 — VERIFICAÇÃO DE CARGOS
+
+Criar função no backend para identificar acesso ao Dashboard.
+
+Permitir acesso se o usuário tiver algum cargo/nome:
+
+- admin
+- administrator
+- moderador
+- moderator
+- staff
+- infraestrutura
+- esportes
+- financeiro
+- marketing
+
+Também permitir configurar IDs de cargos por env:
+
+DASHBOARD_ALLOWED_ROLE_IDS=ID1,ID2,ID3
+
+Se Discord retornar apenas IDs dos cargos, usar esses IDs para definir:
+
+can_access_dashboard = true/false
+
+Se não houver cargos, retornar false.
+
+FASE 6 — DISCORD DEVELOPER PORTAL
+
+Atualizar README informando que no Discord Developer Portal deve ser cadastrado:
+
+OAuth2 → Redirects:
+
+https://stg-main-20-zipzip--duquesadrago.replit.app/auth/discord/callback
+
+Scopes usados:
+identify email guilds guilds.members.read
+
+Não usar scopes desnecessários:
+- bot
+- webhook.incoming
+- messages.read
+- relationships.write
+- guilds.join
+- rpc
+- payment_sources
+- applications.*
+- presences.write
+
+FASE 7 — FRONTEND AUTHCONTEXT
+
+Alterar o AuthContext para usar login direto via API, não Supabase Auth como principal.
+
+Novo comportamento:
+
+1. Ao iniciar o app:
+   - ler localStorage.getItem("stg_auth_token")
+
+2. Se houver token:
+   - chamar GET /auth/me com Authorization: Bearer token
+
+3. Se válido:
+   - setUser(user)
+   - setIsAuthenticated(true)
+
+4. Se inválido:
+   - remover token
+   - setUser(null)
+   - setIsAuthenticated(false)
+
+5. Expor no contexto:
+- user
+- loading
+- isAuthenticated
+- loginWithDiscord()
+- logout()
+- refreshUser()
+
+loginWithDiscord() deve fazer:
+
+window.location.href = `${VITE_API_BASE_URL}/auth/discord/login`
+
+logout() deve:
+1. Remover stg_auth_token do localStorage
+2. Limpar user/session
+3. Redirecionar para /home
+
+FASE 8 — FRONTEND AUTH CALLBACK
+
+Alterar src/pages/AuthCallback.tsx.
+
+Novo comportamento:
+
+1. Ler token da URL:
+   /auth/callback?token=...
+
+2. Se token existir:
+   - salvar no localStorage:
+     localStorage.setItem("stg_auth_token", token)
+   - chamar refreshUser() se disponível
+   - redirecionar para /home
+
+3. Se não houver token:
+   - mostrar erro amigável
+   - redirecionar para /login
+
+Importante:
+- Não processar mais code do Supabase como fluxo principal.
+- Não redirecionar para /dashboard automaticamente.
+- Todos os usuários vão para /home.
+
+FASE 9 — LOGIN PAGE
+
+No botão “Conectar-se com Discord”:
+
+Remover:
+- supabase.auth.signInWithOAuth como fluxo principal
+- URL manual gigante do Discord
+- redirectTo do Supabase como login principal
+
+Usar:
+
+loginWithDiscord()
+
+ou:
+
+window.location.href = `${import.meta.env.VITE_API_BASE_URL}/auth/discord/login`
+
+FASE 10 — NAVBAR / USERMENU
+
+A Navbar deve usar AuthContext.
+
+Se !isAuthenticated:
+- mostrar botão “Conectar-se”
+
+Se isAuthenticated:
+- esconder “Conectar-se”
+- mostrar avatar ou ícone de perfil
+- abrir menu com:
+  - Meu Perfil
+  - Loja
+  - Torneios
+  - Sair
+
+Se user.can_access_dashboard === true:
+- mostrar também:
+  - Dashboard
+  - Admin, se existir
+  - Moderação, se existir
+
+Usar avatar do Discord se existir:
+avatar_url
+
+Fallback:
+- iniciais do username/global_name
+
+FASE 11 — PROTECTED ROUTE
+
+Ajustar ProtectedRoute.
+
+Rotas públicas:
+- /
+- /home
+- /login
+- /loja
+- /store
+- /torneios
+- /tournaments
+- /ranking
+- /auth/callback
+
+Rotas administrativas:
+- /dashboard
+- /admin
+- /moderation
+
+Para rotas admin:
+- exigir isAuthenticated
+- exigir user.can_access_dashboard === true
+
+Se não tiver acesso:
+- redirecionar para /home
+ou mostrar página “Acesso restrito”.
+
+FASE 12 — SUPABASE OPCIONAL
+
+Não apagar Supabase.
+
+Mas:
+- Supabase Auth não deve ser chamado pelo botão principal de login.
+- src/lib/supabase.ts não deve quebrar se envs não existirem.
+- Se Supabase envs estiverem faltando, apenas logar aviso.
+- Manter Supabase preparado para uso futuro, mas desativado no fluxo principal.
+
+FASE 13 — API SERVICE
+
+Garantir src/services/api.ts com base URL:
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || window.location.origin
+
+Adicionar funções:
+
+getMe(token)
+loginWithDiscordUrl()
+logout()
+testConnection()
+getOverview()
+getRanking()
+getTournaments()
+getProducts()
+getPunishments()
+getHighlights()
+
+Não chamar rotas /bot no frontend.
+
+FASE 14 — CORS
+
+Garantir CORS no FastAPI:
+
+allow_origins=["*"]
+allow_credentials=True
+allow_methods=["*"]
+allow_headers=["*"]
+
+Comentário:
+Em produção, restringir ao domínio oficial.
+
+FASE 15 — SPA FALLBACK
+
+Garantir que /auth/callback funcione no frontend.
+
+Se existir server.js, manter fallback para index.html.
+
+Se não existir, criar server.js compatível com Express 5:
+
+import express from "express";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const app = express();
+const distPath = path.join(__dirname, "dist");
+
+app.use(express.static(distPath));
+
+app.use((req, res) => {
+  res.sendFile(path.join(distPath, "index.html"));
+});
+
+const port = process.env.PORT || 3000;
+
+app.listen(port, "0.0.0.0", () => {
+  console.log(`STG frontend rodando em http://0.0.0.0:${port}`);
+});
+
+FASE 16 — PACKAGE.JSON
+
+Garantir scripts:
+
+"scripts": {
+  "dev": "vite --host 0.0.0.0 --port 3000",
+  "build": "vite build",
+  "preview": "vite preview --host 0.0.0.0 --port 3000",
+  "start": "node server.js"
+}
+
+Se TypeScript já exige tsc, manter desde que npm run build funcione.
+
+FASE 17 — TESTES
+
+Rodar:
+
+npm install
+npm run build
+npm run dev
+
+Rodar API:
+
+python -m uvicorn core.main:app --host 0.0.0.0 --port 8000
+
+Testar manualmente:
+
+1. Abrir /home
+2. Clicar Conectar-se
+3. Ir para Discord
+4. Autorizar
+5. Voltar para /auth/callback?token=...
+6. Token ser salvo no localStorage
+7. Ir para /home
+8. Navbar mostrar avatar/perfil
+9. Usuário comum não vê Dashboard
+10. Usuário admin/staff vê Dashboard se can_access_dashboard=true
+11. Logout remove token e volta para botão Conectar-se
+
+FASE 18 — README
+
+Atualizar README com:
+
+1. Como configurar Discord Developer Portal.
+2. Redirect URI:
+   https://stg-main-20-zipzip--duquesadrago.replit.app/auth/discord/callback
+
+3. Replit Secrets necessários:
+   DISCORD_CLIENT_ID
+   DISCORD_CLIENT_SECRET
+   DISCORD_REDIRECT_URI
+   FRONTEND_URL
+   JWT_SECRET_KEY
+   GUILD_ID
+   DASHBOARD_ALLOWED_ROLE_IDS
+
+4. Como testar login.
+5. Como voltar ao Supabase Auth se necessário.
+
+FASE 19 — NÃO QUEBRAR BOT/API
+
+Não alterar:
+- comandos do bot
+- eventos do bot
+- rotas /bot protegidas
+- BOT_API_KEY
+- DISCORD_BOT_TOKEN
+- sistema de XP
+- torneios
+- loja
+- ranking
+- moderação
+
+FASE 20 — RELATÓRIO FINAL
+
+Ao terminar, gerar relatório com:
+1. Arquivos alterados
+2. Rotas criadas
+3. Variáveis necessárias
+4. Como testar
+5. Como configurar Discord Developer Portal
+6. Como configurar Replit Secrets
+7. Como verificar se o login funcionou
+8. Como verificar se a navbar atualizou

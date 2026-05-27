@@ -1,0 +1,92 @@
+modules = ["nodejs-20", "python-3.11"]
+[nix]
+channel = "stable-25_05"
+
+[agent]
+expertMode = true
+
+[userenv]
+
+[userenv.development]
+VITE_REQUIRE_AUTH = "false"
+
+[userenv.shared]
+VITE_SUPABASE_URL = "https://dczcobkcxnlclypahbod.supabase.co"
+VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRjemNvYmtjeG5sY2x5cGFoYm9kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk3NTY2NTAsImV4cCI6MjA5NTMzMjY1MH0.bGbzBBfyQQ3183BDrfMcgVj4_yDk0R5tGT9va2myQA0"
+
+[userenv.production]
+VITE_REQUIRE_AUTH = "false"
+VITE_API_BASE_URL = ""
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "STG Frontend"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "STG API"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "STG Bot"
+
+[[workflows.workflow]]
+name = "STG Frontend"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npm run dev"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
+
+[[workflows.workflow]]
+name = "STG API"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python -m uvicorn core.main:app --host 0.0.0.0 --port 8000 --reload"
+waitForPort = 8000
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[workflows.workflow]]
+name = "STG Bot"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "python bot/main.py"
+
+[workflows.workflow.metadata]
+outputType = "console"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 5001
+externalPort = 3000
+
+[[ports]]
+localPort = 8000
+externalPort = 8000
+
+[deployment]
+deploymentTarget = "autoscale"
+build = ["npm", "run", "build"]
+publicDir = "dist"
+run = ["node", "server.js"]

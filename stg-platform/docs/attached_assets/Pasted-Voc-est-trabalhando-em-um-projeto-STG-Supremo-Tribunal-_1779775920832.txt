@@ -1,0 +1,551 @@
+Você está trabalhando em um projeto STG | Supremo Tribunal Gamer.
+
+Eu importei para este Replit todos os arquivos que estavam sendo editados no VS Code.
+
+Dentro do projeto existem três partes:
+
+1. BOT DISCORD
+- Python
+- discord.py
+- comandos
+- eventos
+- api_client.py
+
+2. API BACKEND
+- Python
+- FastAPI
+- SQLite
+- rotas públicas
+- rotas internas do bot
+- models/schemas/routes
+
+3. SITE / DASHBOARD
+- React
+- TypeScript
+- Vite
+- Tailwind
+- Shadcn/UI
+- frontend criado no Bolt
+
+OBJETIVO:
+Analise todos os arquivos importados e faça apenas o necessário para tornar o projeto funcional dentro do Replit.
+
+NÃO recrie o projeto do zero.
+NÃO apague funcionalidades existentes.
+NÃO substitua a arquitetura.
+NÃO remova o bot.
+NÃO remova a API.
+NÃO remova o site.
+NÃO crie outro frontend.
+NÃO crie outro backend.
+NÃO instale dependências desnecessárias.
+NÃO altere o tema STG.
+NÃO mude nomes principais sem necessidade.
+
+Apenas:
+- organizar arquivos
+- corrigir imports
+- corrigir paths
+- corrigir requirements
+- corrigir package.json
+- corrigir scripts
+- conectar bot + API + site
+- deixar tudo rodando no Replit
+
+ARQUITETURA ESPERADA:
+
+BOT DISCORD
+↓
+API FASTAPI
+↓
+SITE REACT/VITE
+
+O bot deve continuar falando com a API.
+O site deve consumir a API.
+A API deve servir os dados para o site.
+Tudo deve funcionar no Replit.
+
+FASE 1 — AUDITORIA COMPLETA
+
+Antes de alterar qualquer coisa, analise o diretório inteiro e gere um relatório com:
+
+1. Estrutura atual de pastas.
+2. Onde está o bot.
+3. Onde está a API.
+4. Onde está o site/frontend.
+5. Qual é o arquivo principal do bot.
+6. Qual é o arquivo principal da API.
+7. Qual é a pasta principal do frontend.
+8. Se existe package.json.
+9. Se existe src/main.tsx.
+10. Se existe index.html do Vite.
+11. Se existe vite.config.ts.
+12. Se existe requirements.txt.
+13. Se existem requirements separados em bot/ ou core/.
+14. Se existem arquivos duplicados.
+15. Se existem caminhos quebrados.
+16. Se existem imports quebrados.
+17. Se existem variáveis de ambiente faltando.
+18. Se existe Supabase obrigatório.
+19. Se existe ProtectedRoute bloqueando o dashboard.
+20. Se a API possui rotas públicas para o frontend.
+21. Se o bot consegue apontar para a API local.
+22. Se o frontend consegue apontar para a API local.
+
+Depois da auditoria, aplique as correções necessárias.
+
+FASE 2 — ORGANIZAÇÃO ESPERADA
+
+Se possível, organizar ou manter a estrutura assim:
+
+/
+├── bot/
+│   ├── main.py
+│   ├── bot.py
+│   ├── commands.py
+│   ├── events.py
+│   ├── api_client.py
+│   └── requirements.txt
+│
+├── core/
+│   ├── main.py
+│   ├── routes/
+│   ├── models/
+│   ├── schemas/
+│   └── utils/
+│
+├── frontend/
+│   ├── package.json
+│   ├── index.html
+│   ├── vite.config.ts
+│   ├── src/
+│   └── .env
+│
+├── run.py
+├── README.md
+└── .replit
+
+Se o frontend estiver na raiz e já estiver funcional, não mover sem necessidade.
+Se mover arquivos, corrigir todos os paths.
+
+FASE 3 — BACKEND / API FASTAPI
+
+Identifique o app FastAPI.
+
+Pode estar em:
+- core/main.py
+- core/api.py
+- main.py
+
+Garanta que exista:
+
+app = FastAPI(...)
+
+A API deve rodar em:
+
+host = 0.0.0.0
+port = 8000
+
+Garantir rotas básicas:
+
+GET /
+GET /health
+GET /status
+GET /docs
+
+Garantir CORS liberado para desenvolvimento:
+
+allow_origins=["*"]
+allow_credentials=True
+allow_methods=["*"]
+allow_headers=["*"]
+
+Adicionar comentário dizendo que em produção o CORS deve ser restrito ao domínio oficial.
+
+FASE 4 — ROTAS PÚBLICAS PARA O SITE
+
+Garantir que existam rotas públicas para o frontend:
+
+GET /public/overview
+GET /public/stats
+GET /public/ranking
+GET /public/tournaments
+GET /public/products
+GET /public/punishments
+GET /public/highlights
+
+Essas rotas:
+- não devem exigir autenticação
+- não devem exigir BOT_API_KEY
+- devem retornar JSON seguro
+- devem retornar lista vazia ou zero se não houver dados
+- não devem quebrar caso o banco esteja vazio
+
+A rota /public/overview deve retornar algo assim:
+
+{
+  "api": "online",
+  "bot": "online",
+  "project": "STG | Supremo Tribunal Gamer",
+  "users_total": 0,
+  "products_total": 0,
+  "tournaments_total": 0,
+  "punishments_total": 0,
+  "ranking_top": [],
+  "last_sync": ""
+}
+
+A rota /public/highlights deve retornar destaques para a home/carrossel:
+
+[
+  {
+    "id": "product-1",
+    "title": "Nome do destaque",
+    "description": "Descrição",
+    "imageUrl": "",
+    "type": "product",
+    "href": "/loja",
+    "ctaLabel": "Ver item",
+    "badge": "Loja"
+  }
+]
+
+Se não houver produtos/torneios destacados, retornar [].
+
+FASE 5 — ROTAS INTERNAS DO BOT
+
+Preservar as rotas /bot já existentes.
+
+Elas devem continuar protegidas com:
+
+X-Bot-Api-Key
+
+Não expor essa chave no frontend.
+
+Rotas como estas devem permanecer apenas para o bot:
+
+/bot/user/{discord_id}
+/bot/user/{discord_id}/add-coins
+/bot/user/{discord_id}/add-xp
+/bot/user/{discord_id}/daily
+/bot/user/{discord_id}/transfer
+/bot/tournaments/{code}/approve
+/bot/tournaments/{code}/reject
+
+FASE 6 — BOT DISCORD
+
+Identifique o arquivo principal do bot.
+
+Pode ser:
+- bot/main.py
+- bot/bot.py
+- main.py
+
+Garanta que o bot:
+- importa corretamente os módulos
+- usa o token atual/configuração atual
+- mantém comandos existentes
+- mantém eventos existentes
+- mantém on_message com bot.process_commands(message)
+- não quebra slash commands
+- consegue conectar com a API local
+
+Durante desenvolvimento no Replit, a API local deve ser:
+
+http://127.0.0.1:8000
+
+ou:
+
+http://localhost:8000
+
+Em bot/api_client.py, usar:
+
+API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
+BOT_API_KEY = os.getenv("BOT_API_KEY", "stgbottzim")
+
+Não matar o bot se a API estiver offline.
+Se a API falhar, apenas registrar aviso e continuar quando possível.
+
+FASE 7 — FRONTEND / SITE
+
+Identifique o frontend React/Vite.
+
+Garanta que existam:
+
+package.json
+index.html
+src/main.tsx
+src/App.tsx
+src/services/api.ts
+vite.config.ts
+
+Se src/main.tsx não existir, criar:
+
+import { createRoot } from 'react-dom/client'
+import App from './App.tsx'
+import './index.css'
+
+createRoot(document.getElementById('root')!).render(<App />)
+
+Garantir que index.html tenha:
+
+<script type="module" src="/src/main.tsx"></script>
+
+Garantir package.json com scripts:
+
+"scripts": {
+  "dev": "vite",
+  "build": "vite build",
+  "preview": "vite preview --host 0.0.0.0"
+}
+
+Se TypeScript exigir build com tsc, manter:
+
+"build": "tsc -b && vite build"
+
+desde que funcione.
+
+FASE 8 — API DO FRONTEND
+
+Corrigir src/services/api.ts para usar:
+
+import.meta.env.VITE_API_BASE_URL
+
+No Replit, o frontend deve conseguir consumir a API localmente com fallback:
+
+VITE_API_BASE_URL=http://127.0.0.1:8000
+
+Criar ou corrigir .env do frontend:
+
+VITE_API_BASE_URL=http://127.0.0.1:8000
+VITE_REQUIRE_AUTH=false
+
+Criar .env.example:
+
+VITE_API_BASE_URL=https://sua-api-publica
+VITE_REQUIRE_AUTH=false
+
+A API service deve ter funções:
+
+getHealth()
+getOverview()
+getStats()
+getRanking()
+getTournaments()
+getProducts()
+getPunishments()
+getHighlights()
+testConnection()
+
+Todas as funções devem:
+- tratar API offline
+- tratar erro de CORS
+- tratar endpoint inexistente
+- retornar [] ou objeto seguro se falhar
+- não quebrar a interface
+
+FASE 9 — SUPABASE / LOGIN
+
+O frontend NÃO deve depender obrigatoriamente de Supabase.
+
+Se existir:
+- src/lib/supabase.ts
+- AuthContext
+- ProtectedRoute
+- Supabase provider
+
+Ajustar para:
+- Supabase ser opcional
+- não quebrar se VITE_SUPABASE_URL não existir
+- permitir modo desenvolvimento com VITE_REQUIRE_AUTH=false
+- login Discord pode ser apenas visual/preparado
+- usuários comuns devem ir para Home/Landing
+- Dashboard deve aparecer apenas para usuários com permissão
+
+Não remover as telas, apenas impedir que bloqueiem o funcionamento.
+
+FASE 10 — HOME / LANDING / DASHBOARD
+
+Manter o novo fluxo:
+
+1. Todos os usuários logados vão para Home ou Landing.
+2. Dashboard não é a home principal.
+3. Dashboard só aparece para admin/mod/staff.
+4. Home deve ter carrossel de destaques.
+5. Navbar deve levar para:
+   - Home
+   - Loja
+   - Torneios
+   - Ranking
+   - Perfil/Login
+
+Se já existir essa implementação, apenas corrigir para funcionar.
+
+Se não existir, criar de forma simples sem quebrar o restante.
+
+FASE 11 — EXECUÇÃO NO REPLIT
+
+Criar ou corrigir run.py na raiz.
+
+Objetivo:
+Subir API + frontend preview, e opcionalmente bot.
+
+Como o Replit Free pode ter limitações, criar modos claros.
+
+run.py deve:
+1. iniciar API FastAPI na porta 8000
+2. iniciar frontend Vite na porta 5173 ou servir build estático
+3. opcionalmente iniciar bot se variável START_BOT=true
+
+Exemplo de comportamento:
+
+START_BOT=true python run.py
+
+ou:
+
+python run.py
+
+Se for mais seguro, criar scripts separados:
+
+API:
+python -m uvicorn core.main:app --host 0.0.0.0 --port 8000
+
+Bot:
+python bot/main.py
+
+Frontend:
+cd frontend && npm install && npm run dev -- --host 0.0.0.0
+
+FASE 12 — .REPLIT E WORKFLOWS
+
+Corrigir .replit para apontar para o comando correto.
+
+Preferência:
+
+run = "python run.py"
+
+Se isso não for adequado, documentar claramente:
+
+Workflow 1: API
+Workflow 2: Bot
+Workflow 3: Frontend
+
+Não deixar comando quebrado.
+
+FASE 13 — REQUIREMENTS
+
+Corrigir requirements.txt.
+
+Remover módulos nativos:
+- os
+- sys
+- json
+- random
+- string
+- datetime
+- asyncio
+
+Manter dependências reais:
+
+discord.py
+fastapi
+uvicorn
+sqlalchemy
+pydantic
+aiohttp
+requests
+python-dotenv
+psutil
+passlib
+bcrypt
+PyJWT
+
+Se houver requirements em bot/, core/ ou raiz, consolidar ou documentar.
+
+FASE 14 — NODE / FRONTEND DEPENDENCIES
+
+No frontend:
+- verificar package.json
+- verificar dependências
+- garantir que npm install funcione
+- garantir que npm run build funcione
+- não instalar pacotes desnecessários
+
+FASE 15 — TESTES OBRIGATÓRIOS
+
+Depois das correções, testar:
+
+API:
+python -m uvicorn core.main:app --host 0.0.0.0 --port 8000
+
+Se o app estiver em core/api.py:
+python -m uvicorn core.api:app --host 0.0.0.0 --port 8000
+
+Testar:
+GET /
+GET /health
+GET /public/overview
+GET /public/highlights
+GET /docs
+
+Frontend:
+cd frontend
+npm install
+npm run build
+npm run dev -- --host 0.0.0.0
+
+Bot:
+python bot/main.py
+
+Se não for possível executar todos simultaneamente, documentar os workflows.
+
+FASE 16 — README
+
+Atualizar README.md com:
+
+1. Como rodar API no Replit.
+2. Como rodar bot no Replit.
+3. Como rodar frontend no Replit.
+4. Como conectar frontend à API.
+5. Como configurar variáveis.
+6. Como fazer deploy do frontend na Vercel.
+7. Como migrar bot/API para VM Oracle futuramente.
+
+FASE 17 — RELATÓRIO FINAL
+
+Ao terminar, gerar um relatório final com:
+
+1. Estrutura final detectada.
+2. Arquivos alterados.
+3. Arquivos criados.
+4. Rotas públicas disponíveis.
+5. Rotas protegidas preservadas.
+6. Como iniciar API.
+7. Como iniciar bot.
+8. Como iniciar frontend.
+9. Como acessar o site.
+10. Como acessar Swagger.
+11. Pendências restantes.
+12. Próximos passos.
+
+RESULTADO ESPERADO:
+
+O projeto importado deve ficar funcional no Replit com:
+
+- bot operacional
+- API operacional
+- frontend operacional
+- frontend consumindo API
+- bot consumindo API
+- rotas públicas para site
+- rotas /bot preservadas
+- build Vite funcionando
+- comandos documentados
+
+Prioridade máxima:
+1. Não quebrar o bot.
+2. Não quebrar a API.
+3. Fazer o site abrir.
+4. Fazer o site consumir a API.
+5. Fazer npm run build passar.
+6. Deixar claro como rodar tudo.
