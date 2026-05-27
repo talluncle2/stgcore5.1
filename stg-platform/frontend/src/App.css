@@ -158,6 +158,17 @@
   to { transform: translateX(6%) rotate(3deg); }
 }
 
+@keyframes settings-slide {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .stg-loader__backdrop,
   .stg-loader__ring--outer,

@@ -1,6 +1,6 @@
 import './App.css';
 import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Landing } from './pages/Landing';
@@ -9,7 +9,6 @@ import { Ranking } from './pages/Ranking';
 import { Tournaments } from './pages/Tournaments';
 import { Store } from './pages/Store';
 import { Players } from './pages/Players';
-import { Admin } from './pages/Admin';
 import { Moderation } from './pages/Moderation';
 import { Settings } from './pages/Settings';
 import { Login } from './pages/Login';
@@ -82,7 +81,15 @@ function App() {
           <Route
             path="/settings"
             element={
-              <ProtectedRoute requireAdmin>
+              <ProtectedRoute requireDashboardAccess>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/configuracoes"
+            element={
+              <ProtectedRoute requireDashboardAccess>
                 <Settings />
               </ProtectedRoute>
             }
@@ -101,7 +108,7 @@ function App() {
             path="/admin"
             element={
               <ProtectedRoute requireDashboardAccess>
-                <Admin />
+                <Navigate to="/configuracoes?tab=membros" replace />
               </ProtectedRoute>
             }
           />

@@ -11,7 +11,6 @@ import {
   Trophy,
   Users,
   X,
-  Zap,
 } from "lucide-react";
 import { useState } from "react";
 import { useAuth } from "../../context/AuthContext";
@@ -29,13 +28,12 @@ const mainNavigation = [
 const authNavigation = [
   { name: "Jogadores", path: "/players", icon: Users },
   { name: "Meu Perfil", path: "/profile", icon: Users },
-  { name: "Configurações", path: "/settings", icon: Settings },
 ];
 
 const adminNavigation = [
   { name: "Dashboard", path: "/dashboard", icon: Gauge },
-  { name: "Moderação", path: "/moderation", icon: Shield },
-  { name: "Admin", path: "/admin", icon: Zap },
+  { name: "Moderacao", path: "/moderation", icon: Shield },
+  { name: "Configuracoes", path: "/configuracoes?tab=loja", icon: Settings },
 ];
 
 type NavigationItem = {
@@ -52,7 +50,8 @@ export function Sidebar() {
 
   const renderItem = (item: NavigationItem, tone: "default" | "admin" = "default") => {
     const Icon = item.icon;
-    const isActive = location.pathname === item.path;
+    const itemPath = item.path.split("?")[0];
+    const isActive = location.pathname === itemPath;
     const active = tone === "admin"
       ? "border-[#84cc16]/60 bg-[#84cc16]/12 text-[#f8fafc] shadow-[inset_3px_0_0_#84cc16] glow-green"
       : "border-[#a855f7]/60 bg-[#a855f7]/12 text-[#f8fafc] shadow-[inset_3px_0_0_#a855f7] glow-purple";
@@ -96,18 +95,14 @@ export function Sidebar() {
         <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-4 py-6">
           <div className="mb-1 flex items-center gap-2 px-4 text-[#a855f7]">
             <Crosshair size={14} />
-            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#7c3aed]">
-              Operações
-            </span>
+            <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#7c3aed]">Operacoes</span>
           </div>
           {mainNavigation.map((item) => renderItem(item))}
 
           {isAuthenticated && (
             <>
               <div className="pb-2 pt-4">
-                <p className="px-4 text-xs font-black uppercase tracking-[0.16em] text-[#7c3aed]">
-                  Conta
-                </p>
+                <p className="px-4 text-xs font-black uppercase tracking-[0.16em] text-[#7c3aed]">Conta</p>
               </div>
               {authNavigation.map((item) => renderItem(item))}
             </>
@@ -116,9 +111,7 @@ export function Sidebar() {
           {isAuthenticated && canOpenDashboard && (
             <>
               <div className="pb-2 pt-4">
-                <p className="px-4 text-xs font-black uppercase tracking-[0.16em] text-[#84cc16]">
-                  Administração
-                </p>
+                <p className="px-4 text-xs font-black uppercase tracking-[0.16em] text-[#84cc16]">Administracao</p>
               </div>
               {adminNavigation.map((item) => renderItem(item, "admin"))}
             </>

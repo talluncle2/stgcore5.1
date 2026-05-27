@@ -57,7 +57,7 @@ export function News() {
               />
             </div>
             {canManageContent(user ?? profile) && (
-              <Link to="/admin/noticias" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
+              <Link to="/configuracoes?tab=noticias" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
                 <Edit3 size={16} />
                 Gerir
               </Link>

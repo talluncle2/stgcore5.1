@@ -47,10 +47,9 @@ export function Topbar() {
   const adminLinks: NavItem[] = canOpenDashboard
     ? [
         { label: "Dashboard", path: "/dashboard", icon: Gauge },
-        { label: "Admin", path: "/admin", icon: ShieldCheck },
         { label: "Moderacao", path: "/moderation", icon: ShieldCheck },
         ...(canOpenSettings
-          ? [{ label: "Configuracoes", path: "/settings", icon: ShieldCheck }]
+          ? [{ label: "Configuracoes", path: "/configuracoes?tab=loja", icon: ShieldCheck }]
           : []),
       ]
     : [];

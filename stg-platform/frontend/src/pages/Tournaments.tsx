@@ -64,7 +64,7 @@ export function Tournaments() {
             <p className="text-[#94a3b8]">Acompanhe temporadas, torneios e chamadas competitivas da STG.</p>
           </div>
           {canManageContent(user ?? profile) && (
-            <Link to="/admin/torneios" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
+            <Link to="/configuracoes?tab=campeonatos" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
               <Edit3 size={16} />
               Gerir torneios
             </Link>

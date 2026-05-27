@@ -1,4 +1,4 @@
-import { Edit3, Trash2 } from "lucide-react";
+import { SettingsActionMenu } from "../settings/SettingsActionMenu";
 
 interface AdminContentCardProps {
   title: string;
@@ -39,18 +39,13 @@ export function AdminContentCard({
           {subtitle && <p className="mt-1 text-xs font-bold uppercase tracking-[0.06em] text-[#94a3b8]">{subtitle}</p>}
           {description && <p className="mt-2 line-clamp-2 text-sm text-[#94a3b8]">{description}</p>}
         </div>
-        <div className="flex shrink-0 gap-2">
-          <button type="button" onClick={onEdit} className="stg-button-secondary inline-flex items-center gap-2 px-3 py-2 text-xs">
-            <Edit3 size={14} />
-            Editar
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="border border-[#ef4444]/40 bg-[#ef4444]/10 px-3 py-2 text-xs font-black uppercase text-[#fecaca] transition-colors hover:bg-[#ef4444]/20"
-          >
-            <Trash2 size={14} />
-          </button>
+        <div className="shrink-0">
+          <SettingsActionMenu
+            actions={[
+              { label: "Editar", onClick: onEdit },
+              { label: "Excluir", onClick: onDelete, danger: true },
+            ]}
+          />
         </div>
       </div>
     </article>

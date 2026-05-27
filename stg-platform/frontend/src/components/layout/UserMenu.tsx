@@ -124,16 +124,6 @@ export function UserMenu() {
               </>
             )}
 
-            {canOpenAdmin && (
-              <button
-                onClick={() => handleNavigate("/admin")}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-black uppercase tracking-[0.04em] text-[#f97316] transition-colors hover:bg-[#f97316]/10"
-              >
-                <ShieldCheck size={16} />
-                Painel Admin
-              </button>
-            )}
-
             {canOpenModeration && (
               <button
                 onClick={() => handleNavigate("/moderation")}
@@ -146,7 +136,7 @@ export function UserMenu() {
 
             {canOpenSettings && (
               <button
-                onClick={() => handleNavigate("/settings")}
+                onClick={() => handleNavigate("/configuracoes?tab=loja")}
                 className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-black uppercase tracking-[0.04em] text-[#c084fc] transition-colors hover:bg-[#a855f7]/12"
               >
                 <Settings size={16} />

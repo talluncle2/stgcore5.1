@@ -55,7 +55,7 @@ export function Store() {
             <p className="text-[#94a3b8]">Itens com economia hibrida em STG Coins e BRL.</p>
           </div>
           {canManageContent(user ?? profile) && (
-            <Link to="/admin/loja" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
+            <Link to="/configuracoes?tab=loja" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
               <Edit3 size={16} />
               Gerir loja
             </Link>

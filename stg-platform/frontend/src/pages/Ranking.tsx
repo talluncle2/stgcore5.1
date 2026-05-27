@@ -69,7 +69,7 @@ export function Ranking() {
             <p className="text-[#94a3b8]">Veja a posicao de todos os operadores da comunidade</p>
           </div>
           {canManageContent(user ?? profile) && (
-            <Link to="/admin/ranking" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
+            <Link to="/configuracoes?tab=ranking" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
               <Edit3 size={16} />
               Gerir ranking
             </Link>
