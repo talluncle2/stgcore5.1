@@ -8,6 +8,7 @@ import {
   Settings,
   Shield,
   ShoppingCart,
+  Radio,
   Trophy,
   Users,
   X,
@@ -23,6 +24,7 @@ const mainNavigation = [
   { name: "Loja", path: "/loja", icon: ShoppingCart },
   { name: "Torneios", path: "/torneios", icon: Trophy },
   { name: "Ranking", path: "/ranking", icon: Trophy },
+  { name: "Criadores", path: "/criadores", icon: Radio },
 ];
 
 const authNavigation = [

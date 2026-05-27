@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from core.config import get_settings
 from core.database import init_db
-from core.routes import auth, bot_sync, admin
+from core.routes import auth, bot_sync, admin, creators
 
 settings = get_settings()
 
@@ -59,6 +59,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(bot_sync.router)
 app.include_router(admin.router)
+app.include_router(creators.router)
 
 # Health check endpoint
 @app.get("/health")

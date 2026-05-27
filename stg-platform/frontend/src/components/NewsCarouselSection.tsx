@@ -14,9 +14,10 @@ interface NewsCarouselSectionProps {
   description: string;
   categories: NewsCategory[];
   items: NewsItem[];
+  fullscreen?: boolean;
 }
 
-export function NewsCarouselSection({ title, description, categories, items }: NewsCarouselSectionProps) {
+export function NewsCarouselSection({ title, description, categories, items, fullscreen = false }: NewsCarouselSectionProps) {
   const slides = items
     .filter((item) => item.isActive && categories.includes(item.category))
     .sort((a, b) => b.priority - a.priority || b.publishedAt.localeCompare(a.publishedAt))
@@ -32,13 +33,28 @@ export function NewsCarouselSection({ title, description, categories, items }: N
     }));
 
   return (
-    <section className="space-y-3">
-      <div>
-        <h2 className="text-2xl font-black uppercase tracking-[0.06em] text-white">{title}</h2>
-        <p className="mt-1 text-sm text-[#94a3b8]">{description}</p>
+    <section
+      className={
+        fullscreen
+          ? "flex min-h-[calc(100vh-4rem)] snap-start snap-always flex-col justify-center gap-4 py-5 md:py-7"
+          : "space-y-3"
+      }
+    >
+      <div className={fullscreen ? "flex flex-col gap-2 md:flex-row md:items-end md:justify-between" : ""}>
+        <div>
+          <p className="tactical-label">{categoryLabels[categories[0]] || "STG"}</p>
+          <h2 className="mt-1 text-3xl font-black uppercase tracking-[0.06em] text-white md:text-5xl">{title}</h2>
+          <p className="mt-2 max-w-3xl text-sm text-[#94a3b8] md:text-base">{description}</p>
+        </div>
+        {fullscreen && (
+          <div className="hidden border border-[#a855f7]/30 bg-black/35 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-[#c084fc] md:block">
+            Scroll vertical troca categoria
+          </div>
+        )}
       </div>
       <HeroCarousel
-        compact
+        compact={!fullscreen}
+        className={fullscreen ? "min-h-[min(680px,calc(100vh-14rem))] flex-1" : ""}
         slides={slides}
         fallbackTitle={title}
         fallbackDescription="Nenhum conteudo ativo nesta categoria no momento."

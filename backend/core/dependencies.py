@@ -106,6 +106,7 @@ async def get_current_user(
         is_admin=member.is_admin if member else False,
         is_moderator=member.is_moderator if member else False,
         can_access_dashboard=member.can_access_dashboard if member else False,
+        is_content_creator=member.is_content_creator if member else False,
         username=member.username if member and member.username else user.discord_username,
         discord_username=member.discord_username if member and member.discord_username else user.discord_username,
         global_name=member.global_name if member and member.global_name else user.discord_username,

@@ -7,6 +7,7 @@ import {
   Gauge,
   Menu,
   Newspaper,
+  Radio,
   ShieldCheck,
   ShoppingCart,
   Trophy,
@@ -25,6 +26,7 @@ const publicLinks = [
   { label: "Times/Jogadores", path: "/comunidade", icon: Users },
   { label: "Ranking", path: "/ranking", icon: Gauge },
   { label: "Noticias", path: "/noticias", icon: Newspaper },
+  { label: "Criadores", path: "/criadores", icon: Radio },
   { label: "Loja", path: "/loja", icon: ShoppingCart },
 ];
 

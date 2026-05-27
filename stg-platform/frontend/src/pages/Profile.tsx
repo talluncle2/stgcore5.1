@@ -53,6 +53,11 @@ export function Profile() {
                 <div className="cod-rank-badge mb-4">
                   {getRoleBadge(profile.role)}
                 </div>
+                {user.is_content_creator && (
+                  <div className="inline-flex border border-[#ef4444]/45 bg-[#ef4444]/15 px-3 py-1 text-xs font-black uppercase tracking-[0.08em] text-[#fecaca]">
+                    Criador de Conteudo
+                  </div>
+                )}
               </div>
 
               {/* Combat Stats */}

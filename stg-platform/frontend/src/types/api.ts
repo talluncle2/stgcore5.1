@@ -91,6 +91,7 @@ export interface AuthUser {
   is_admin?: boolean;
   is_staff?: boolean;
   is_moderator?: boolean;
+  is_content_creator?: boolean;
   can_access_dashboard?: boolean;
   coins?: number;
   xp?: number;
@@ -322,3 +323,60 @@ export interface AdminSettings {
   disabled_commands?: string[];
   options?: Record<string, unknown>;
 }
+
+export type CreatorPlatform = "youtube" | "twitch" | "kick" | "tiktok";
+export type CreatorContentType = "video" | "live" | "short" | "clip";
+
+export interface CreatorChannel {
+  id: string;
+  creator_id: string;
+  platform: CreatorPlatform;
+  channel_id?: string;
+  channel_url?: string;
+  channel_name?: string;
+  handle?: string;
+  is_active: boolean;
+  last_checked_at?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreatorContent {
+  id: string;
+  creator_id: string;
+  channel_id: string;
+  platform: CreatorPlatform;
+  external_id: string;
+  content_type: CreatorContentType;
+  title?: string;
+  description?: string;
+  thumbnail_url?: string;
+  content_url?: string;
+  embed_url?: string;
+  published_at?: string;
+  started_at?: string;
+  ended_at?: string;
+  is_live: boolean;
+  is_active: boolean;
+  creator?: Pick<ContentCreator, "id" | "display_name" | "username" | "avatar_url">;
+}
+
+export interface ContentCreator {
+  id: string;
+  discord_id: string;
+  guild_id?: string;
+  display_name?: string;
+  username?: string;
+  avatar_url?: string;
+  bio?: string;
+  is_active: boolean;
+  is_featured: boolean;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+  channels: CreatorChannel[];
+  latest_content?: CreatorContent[];
+}
+
+export type ContentCreatorPayload = Partial<Omit<ContentCreator, "id" | "channels" | "latest_content" | "created_at" | "updated_at">>;
+export type CreatorChannelPayload = Partial<Omit<CreatorChannel, "id" | "creator_id" | "created_at" | "updated_at" | "last_checked_at">>;

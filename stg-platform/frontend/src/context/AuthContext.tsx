@@ -139,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role_ids: me.role_ids,
             is_admin: me.is_admin === true,
             is_moderator: me.is_moderator === true,
+            is_content_creator: me.is_content_creator === true,
             can_access_dashboard: me.can_access_dashboard === true,
           });
         }

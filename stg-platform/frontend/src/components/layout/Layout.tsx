@@ -4,6 +4,9 @@ import { Topbar } from "./Topbar";
 
 interface LayoutProps {
   children: ReactNode;
+  hidePageBanner?: boolean;
+  contentClassName?: string;
+  mainClassName?: string;
 }
 
 const pageMeta: Record<string, { title: string; subtitle: string; code: string }> = {
@@ -79,7 +82,7 @@ const pageMeta: Record<string, { title: string; subtitle: string; code: string }
   },
 };
 
-export function Layout({ children }: LayoutProps) {
+export function Layout({ children, hidePageBanner = false, contentClassName = "", mainClassName = "" }: LayoutProps) {
   const location = useLocation();
   const pageKey = location.pathname.replace("/", "") || "home";
   const meta = pageMeta[pageKey] ?? {
@@ -93,8 +96,9 @@ export function Layout({ children }: LayoutProps) {
       <div className="scanline-overlay" />
       <div className="stg-premium-bg" aria-hidden="true" />
       <Topbar />
-      <main className="stg-premium-main relative z-10 mt-16 p-4 text-left lg:p-6">
-        <div className="stg-premium-content">
+      <main className={`stg-premium-main relative z-10 mt-16 p-4 text-left lg:p-6 ${mainClassName}`}>
+        <div className={`stg-premium-content ${contentClassName}`}>
+          {!hidePageBanner && (
           <section className="stg-page-banner mb-7">
             <div>
               <p className="text-xs font-black uppercase tracking-[0.22em] text-[#a855f7]">// {meta.code}</p>
@@ -111,6 +115,7 @@ export function Layout({ children }: LayoutProps) {
               </span>
             </div>
           </section>
+          )}
           {children}
         </div>
       </main>

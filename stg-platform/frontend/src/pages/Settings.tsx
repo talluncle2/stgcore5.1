@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   ShoppingCart,
   Trophy,
+  Video,
   Users,
   XCircle,
 } from "lucide-react";
@@ -21,6 +22,7 @@ import { RankingManager } from "../components/admin/RankingManager";
 import { TournamentManager } from "../components/admin/TournamentManager";
 import { NewsManager } from "../components/admin/NewsManager";
 import { HomeManager } from "../components/admin/HomeManager";
+import { AdminCreators } from "../components/admin/AdminCreators";
 import { SettingsSectionCard } from "../components/settings/SettingsSectionCard";
 import { SettingsSidebar, SettingsNavItem } from "../components/settings/SettingsSidebar";
 import { SettingsStatusBadge } from "../components/settings/SettingsStatusBadge";
@@ -144,6 +146,7 @@ const settingsTabs: SettingsNavItem[] = [
   { id: "loja", label: "Gestao de Loja", description: "Produtos e economia", icon: ShoppingCart },
   { id: "ranking", label: "Gestao de Ranking", description: "Placares e jogadores", icon: Crown },
   { id: "campeonatos", label: "Gestao de Campeonatos", description: "Torneios e temporadas", icon: Trophy },
+  { id: "criadores", label: "Criadores STG", description: "Canais e lives", icon: Video },
   { id: "membros", label: "Gestao de Membros", description: "Usuarios sincronizados", icon: Users },
   { id: "cargos", label: "Gestao de Cargos", description: "Roles e permissoes", icon: ShieldCheck },
   { id: "api", label: "Gestao de API", description: "Diagnostico seguro", icon: Server, adminOnly: true },
@@ -642,6 +645,19 @@ export function Settings() {
     if (activeTab === "loja") return <ContentManagementTab type="loja" />;
     if (activeTab === "ranking") return <ContentManagementTab type="ranking" />;
     if (activeTab === "campeonatos") return <ContentManagementTab type="campeonatos" />;
+    if (activeTab === "criadores") {
+      return (
+        <div className="space-y-5">
+          <SettingsTabHeader
+            icon={Video}
+            eyebrow="Conteudo e comunidade"
+            title="Criadores de Conteudo STG"
+            description="Vincule membros com cargo de criador, canais YouTube/Twitch/Kick/TikTok e verifique lives/videos via API."
+          />
+          <AdminCreators />
+        </div>
+      );
+    }
     if (activeTab === "membros") return <MembersTab />;
     if (activeTab === "cargos") return <RolesTab />;
     if (activeTab === "api") return <ApiTab />;

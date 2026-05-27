@@ -102,6 +102,7 @@ async def get_discord_members(
     db: Session = Depends(get_db),
     is_admin: bool = Query(None),
     is_moderator: bool = Query(None),
+    is_content_creator: bool = Query(None),
     is_bot: bool = Query(None),
     limit: int = Query(50, ge=1, le=1000),
     offset: int = Query(0, ge=0)
@@ -117,6 +118,9 @@ async def get_discord_members(
         
         if is_moderator is not None:
             query = query.filter(DiscordMember.is_moderator == is_moderator)
+
+        if is_content_creator is not None:
+            query = query.filter(DiscordMember.is_content_creator == is_content_creator)
         
         if is_bot is not None:
             query = query.filter(DiscordMember.is_bot == is_bot)

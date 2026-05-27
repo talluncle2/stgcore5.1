@@ -34,9 +34,9 @@ export function News() {
   }, [items, query]);
 
   return (
-    <Layout>
-      <div className="space-y-8">
-        <div className="flex flex-col gap-3 border border-[#a855f7]/20 bg-[#050608]/70 p-4 md:flex-row md:items-center md:justify-between">
+    <Layout hidePageBanner mainClassName="p-0 lg:p-0" contentClassName="max-w-none">
+      <div className="h-[calc(100vh-4rem)] overflow-y-auto scroll-smooth snap-y snap-mandatory">
+        <div className="sticky top-0 z-30 flex flex-col gap-3 border-b border-[#a855f7]/20 bg-[#050608]/92 p-4 backdrop-blur-xl md:flex-row md:items-center md:justify-between lg:px-6">
           <div>
             <p className="tactical-label">Central de anuncios</p>
             <h2 className="text-xl font-black uppercase tracking-[0.06em] text-white">
@@ -66,32 +66,37 @@ export function News() {
         </div>
 
         {loading ? (
-          <div className="stg-hud-panel p-10 text-center text-[#94a3b8]">Carregando noticias...</div>
+          <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-6">
+            <div className="stg-hud-panel p-10 text-center text-[#94a3b8]">Carregando noticias...</div>
+          </div>
         ) : (
-          <>
+          <div className="px-4 lg:px-6">
             <NewsCarouselSection
+              fullscreen
               title="Anuncios STG"
               description="Avisos oficiais, regras novas, eventos importantes e comunicados da comunidade."
               categories={["anuncio"]}
               items={filteredItems}
             />
             <NewsCarouselSection
+              fullscreen
               title="Temporadas e Torneios"
               description="Previas de temporadas, campeonatos, operacoes competitivas e rankings especiais."
               categories={["temporada", "torneio"]}
               items={filteredItems}
             />
             <NewsCarouselSection
+              fullscreen
               title="Atualizacoes e Novidades"
               description="Mudancas no sistema STG, bot, site, loja e novidades relevantes do jogo."
               categories={["sistema", "jogo"]}
               items={filteredItems}
             />
-          </>
+          </div>
         )}
 
         {!loading && filteredItems.length === 0 && (
-          <div className="stg-hud-panel p-8 text-center">
+          <div className="mx-4 mb-6 snap-start stg-hud-panel p-8 text-center lg:mx-6">
             <Newspaper className="mx-auto mb-3 text-[#a855f7]" size={38} />
             <p className="font-black uppercase text-white">Nenhum conteudo encontrado</p>
           </div>

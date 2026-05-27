@@ -1,11 +1,13 @@
 """SQLAlchemy Models for Discord Sync Data"""
+import uuid
 from datetime import datetime
 from sqlalchemy import (
     Column, Integer, String, BigInteger, Boolean, Float, DateTime,
-    ForeignKey, UniqueConstraint, Index
+    ForeignKey, UniqueConstraint, Index, Text
 )
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.dialects.postgresql import JSON as PG_JSON
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import JSON as PG_JSON, JSONB, UUID as PG_UUID
 
 Base = declarative_base()
 
@@ -60,6 +62,7 @@ class DiscordMember(Base):
     is_admin = Column(Boolean, default=False, index=True)
     is_moderator = Column(Boolean, default=False, index=True)
     can_access_dashboard = Column(Boolean, default=False, index=True)
+    is_content_creator = Column(Boolean, default=False, index=True)
     last_discord_sync_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
     updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -71,6 +74,76 @@ class DiscordMember(Base):
     )
     
     guild = relationship("DiscordGuild", back_populates="members")
+
+class ContentCreator(Base):
+    __tablename__ = "content_creators"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    discord_id = Column(String, nullable=False, index=True)
+    guild_id = Column(String, index=True)
+    display_name = Column(String)
+    username = Column(String)
+    avatar_url = Column(String)
+    bio = Column(Text)
+    is_active = Column(Boolean, default=True, index=True)
+    is_featured = Column(Boolean, default=False, index=True)
+    sort_order = Column(Integer, default=0, index=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    channels = relationship("CreatorChannel", back_populates="creator", cascade="all, delete-orphan")
+    contents = relationship("CreatorContent", back_populates="creator", cascade="all, delete-orphan")
+
+class CreatorChannel(Base):
+    __tablename__ = "creator_channels"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    creator_id = Column(PG_UUID(as_uuid=True), ForeignKey("content_creators.id", ondelete="CASCADE"), nullable=False, index=True)
+    platform = Column(String, nullable=False, index=True)
+    channel_id = Column(String)
+    channel_url = Column(String)
+    channel_name = Column(String)
+    handle = Column(String)
+    is_active = Column(Boolean, default=True, index=True)
+    last_checked_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    creator = relationship("ContentCreator", back_populates="channels")
+    contents = relationship("CreatorContent", back_populates="channel", cascade="all, delete-orphan")
+
+class CreatorContent(Base):
+    __tablename__ = "creator_content"
+
+    id = Column(PG_UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    creator_id = Column(PG_UUID(as_uuid=True), ForeignKey("content_creators.id", ondelete="CASCADE"), nullable=False, index=True)
+    channel_id = Column(PG_UUID(as_uuid=True), ForeignKey("creator_channels.id", ondelete="CASCADE"), nullable=False, index=True)
+    platform = Column(String, nullable=False, index=True)
+    external_id = Column(String, nullable=False)
+    content_type = Column(String, nullable=False)
+    title = Column(String)
+    description = Column(Text)
+    thumbnail_url = Column(String)
+    content_url = Column(String)
+    embed_url = Column(String)
+    published_at = Column(DateTime(timezone=True), index=True)
+    started_at = Column(DateTime(timezone=True))
+    ended_at = Column(DateTime(timezone=True))
+    is_live = Column(Boolean, default=False, index=True)
+    is_active = Column(Boolean, default=True, index=True)
+    raw_json = Column(JSONB, default={})
+    created_at = Column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at = Column(DateTime(timezone=True), default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (
+        UniqueConstraint("platform", "external_id", name="uq_creator_content_platform_external"),
+        Index("idx_creator_content_platform", "platform"),
+        Index("idx_creator_content_is_live", "is_live"),
+        Index("idx_creator_content_published_at", "published_at"),
+    )
+
+    creator = relationship("ContentCreator", back_populates="contents")
+    channel = relationship("CreatorChannel", back_populates="contents")
 
 class DiscordRole(Base):
     __tablename__ = "discord_roles"

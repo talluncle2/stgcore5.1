@@ -7,6 +7,7 @@ const sectionToTab: Record<string, string> = {
   campeonatos: "campeonatos",
   home: "home",
   ranking: "ranking",
+  criadores: "criadores",
   membros: "membros",
   cargos: "cargos",
   api: "api",

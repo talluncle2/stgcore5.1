@@ -17,6 +17,7 @@ import { Profile } from './pages/Profile';
 import { AuthCallback } from './pages/AuthCallback';
 import { Community } from './pages/Community';
 import { News } from './pages/News';
+import { Creators } from './pages/Creators';
 import { ContentManagerPage } from './pages/ContentManagerPage';
 import { LoadingScreen } from './components/LoadingScreen';
 
@@ -51,6 +52,8 @@ function App() {
           <Route path="/comunidade" element={<Community />} />
           <Route path="/times" element={<Community />} />
           <Route path="/noticias" element={<News />} />
+          <Route path="/criadores" element={<Creators />} />
+          <Route path="/creators" element={<Creators />} />
           <Route path="/loading-preview" element={<LoadingScreen />} />
           <Route
             path="/preview"

@@ -30,10 +30,11 @@ def verify_api_key(x_bot_api_key: str = Header(...)) -> bool:
     return True
 
 def calculate_member_permissions(member_request: BotSyncMemberRequest, db: Session) -> tuple:
-    """Calculate if member should be admin, moderator, or have dashboard access"""
+    """Calculate member permissions from configured Discord role IDs."""
     is_admin = False
     is_moderator = False
     can_access_dashboard = False
+    is_content_creator = False
     
     role_ids = member_request.role_ids or []
     
@@ -48,8 +49,10 @@ def calculate_member_permissions(member_request: BotSyncMemberRequest, db: Sessi
             can_access_dashboard = True
         elif role_id in settings.DASHBOARD_ALLOWED_ROLE_IDS:
             can_access_dashboard = True
+        if role_id in settings.CONTENT_CREATOR_ROLE_IDS:
+            is_content_creator = True
     
-    return is_admin, is_moderator, can_access_dashboard
+    return is_admin, is_moderator, can_access_dashboard, is_content_creator
 
 @router.post("/guild", response_model=SuccessResponse)
 async def sync_guild(
@@ -128,7 +131,7 @@ async def sync_member(
         now = datetime.now(timezone.utc)
         
         # Calculate permissions
-        is_admin, is_moderator, can_access_dashboard = calculate_member_permissions(request, db)
+        is_admin, is_moderator, can_access_dashboard, is_content_creator = calculate_member_permissions(request, db)
         
         stmt = insert(DiscordMember).values(
             guild_id=request.guild_id,
@@ -147,6 +150,7 @@ async def sync_member(
             is_admin=is_admin,
             is_moderator=is_moderator,
             can_access_dashboard=can_access_dashboard,
+            is_content_creator=is_content_creator,
             last_discord_sync_at=now,
             updated_at=now
         ).on_conflict_do_update(
@@ -166,6 +170,7 @@ async def sync_member(
                 "is_admin": is_admin,
                 "is_moderator": is_moderator,
                 "can_access_dashboard": can_access_dashboard,
+                "is_content_creator": is_content_creator,
                 "last_discord_sync_at": now,
                 "updated_at": now
             }
@@ -195,7 +200,7 @@ async def sync_members(
         
         for member_request in request.members:
             # Calculate permissions
-            is_admin, is_moderator, can_access_dashboard = calculate_member_permissions(member_request, db)
+            is_admin, is_moderator, can_access_dashboard, is_content_creator = calculate_member_permissions(member_request, db)
             
             stmt = insert(DiscordMember).values(
                 guild_id=request.guild_id,
@@ -214,6 +219,7 @@ async def sync_members(
                 is_admin=is_admin,
                 is_moderator=is_moderator,
                 can_access_dashboard=can_access_dashboard,
+                is_content_creator=is_content_creator,
                 last_discord_sync_at=now,
                 updated_at=now
             ).on_conflict_do_update(
@@ -233,6 +239,7 @@ async def sync_members(
                     "is_admin": is_admin,
                     "is_moderator": is_moderator,
                     "can_access_dashboard": can_access_dashboard,
+                    "is_content_creator": is_content_creator,
                     "last_discord_sync_at": now,
                     "updated_at": now
                 }

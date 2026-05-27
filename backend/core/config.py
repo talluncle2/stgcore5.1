@@ -23,9 +23,11 @@ class Settings:
     ADMIN_ROLE_IDS: list = [int(x) for x in os.getenv("ADMIN_ROLE_IDS", "").split(",") if x]
     MODERATOR_ROLE_IDS: list = [int(x) for x in os.getenv("MODERATOR_ROLE_IDS", "").split(",") if x]
     DASHBOARD_ALLOWED_ROLE_IDS: list = [int(x) for x in os.getenv("DASHBOARD_ALLOWED_ROLE_IDS", "").split(",") if x]
+    CONTENT_CREATOR_ROLE_IDS: list = [int(x) for x in os.getenv("CONTENT_CREATOR_ROLE_IDS", "").split(",") if x]
     
     # API
     BOT_API_KEY: str = os.getenv("BOT_API_KEY", "")
+    INTERNAL_SYNC_KEY: str = os.getenv("INTERNAL_SYNC_KEY", "")
     JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 24
@@ -37,6 +39,11 @@ class Settings:
     # Environment
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"
     ENVIRONMENT: str = os.getenv("ENVIRONMENT", "development")
+
+    # Creator platform integrations - server-side only
+    YOUTUBE_API_KEY: str = os.getenv("YOUTUBE_API_KEY", "")
+    TWITCH_CLIENT_ID: str = os.getenv("TWITCH_CLIENT_ID", "")
+    TWITCH_CLIENT_SECRET: str = os.getenv("TWITCH_CLIENT_SECRET", "")
 
 @lru_cache()
 def get_settings() -> Settings:

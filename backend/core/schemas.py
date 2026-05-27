@@ -25,6 +25,7 @@ class AuthUser(BaseModel):
     is_staff: bool = False
     is_moderator: bool = False
     can_access_dashboard: bool = False
+    is_content_creator: bool = False
     coins: Optional[int] = 0
     xp: Optional[int] = 0
     level: Optional[int] = 1
@@ -56,6 +57,7 @@ class DiscordMemberSchema(BaseModel):
     is_admin: bool = False
     is_moderator: bool = False
     can_access_dashboard: bool = False
+    is_content_creator: bool = False
     
     class Config:
         from_attributes = True
@@ -214,3 +216,87 @@ class ErrorResponse(BaseModel):
     success: bool = False
     error: str
     details: Optional[Dict[str, Any]] = None
+
+class CreatorChannelBase(BaseModel):
+    platform: str
+    channel_id: Optional[str] = None
+    channel_url: Optional[str] = None
+    channel_name: Optional[str] = None
+    handle: Optional[str] = None
+    is_active: bool = True
+
+class CreatorChannelCreate(CreatorChannelBase):
+    pass
+
+class CreatorChannelUpdate(BaseModel):
+    platform: Optional[str] = None
+    channel_id: Optional[str] = None
+    channel_url: Optional[str] = None
+    channel_name: Optional[str] = None
+    handle: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class CreatorChannelResponse(CreatorChannelBase):
+    id: str
+    creator_id: str
+    last_checked_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+    class Config:
+        from_attributes = True
+
+class CreatorContentResponse(BaseModel):
+    id: str
+    creator_id: str
+    channel_id: str
+    platform: str
+    external_id: str
+    content_type: str
+    title: Optional[str] = None
+    description: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    content_url: Optional[str] = None
+    embed_url: Optional[str] = None
+    published_at: Optional[datetime] = None
+    started_at: Optional[datetime] = None
+    ended_at: Optional[datetime] = None
+    is_live: bool = False
+    is_active: bool = True
+    creator: Optional[Dict[str, Any]] = None
+
+    class Config:
+        from_attributes = True
+
+class ContentCreatorBase(BaseModel):
+    discord_id: str
+    guild_id: Optional[str] = None
+    display_name: Optional[str] = None
+    username: Optional[str] = None
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    is_active: bool = True
+    is_featured: bool = False
+    sort_order: int = 0
+
+class ContentCreatorCreate(ContentCreatorBase):
+    pass
+
+class ContentCreatorUpdate(BaseModel):
+    display_name: Optional[str] = None
+    username: Optional[str] = None
+    avatar_url: Optional[str] = None
+    bio: Optional[str] = None
+    is_active: Optional[bool] = None
+    is_featured: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+class ContentCreatorResponse(ContentCreatorBase):
+    id: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+    channels: List[CreatorChannelResponse] = []
+    latest_content: List[CreatorContentResponse] = []
+
+    class Config:
+        from_attributes = True

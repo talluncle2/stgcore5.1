@@ -19,6 +19,7 @@ interface HeroCarouselProps {
   fallbackDescription: string;
   autoplay?: boolean;
   compact?: boolean;
+  className?: string;
 }
 
 export function HeroCarousel({
@@ -27,6 +28,7 @@ export function HeroCarousel({
   fallbackDescription,
   autoplay = true,
   compact = false,
+  className = "",
 }: HeroCarouselProps) {
   const activeSlides = slides.length > 0 ? slides : [
     {
@@ -54,7 +56,7 @@ export function HeroCarousel({
   const goToNext = () => setActiveIndex((current) => (current + 1) % activeSlides.length);
 
   return (
-    <div className={`relative overflow-hidden border border-[#a855f7]/25 bg-[#050608] ${compact ? "min-h-[320px]" : "min-h-[430px]"}`}>
+    <div className={`relative overflow-hidden border border-[#a855f7]/25 bg-[#050608] ${compact ? "min-h-[320px]" : "min-h-[430px]"} ${className}`}>
       <div
         className="absolute inset-0 flex transition-transform duration-700 ease-out"
         style={{ transform: `translateX(-${activeIndex * 100}%)` }}

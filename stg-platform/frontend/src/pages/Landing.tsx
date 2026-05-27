@@ -21,7 +21,8 @@ import { UserMenu } from "../components/layout/UserMenu";
 import { useAuth } from "../context/AuthContext";
 import { getFeaturedHeroItems } from "../services/featuredService";
 import { getActiveHomeContent } from "../services/homeService";
-import { FeaturedHeroItem, HomeContentItem } from "../types/api";
+import { getLatestCreatorContent, getLiveCreators } from "../services/creatorsService";
+import { FeaturedHeroItem, HomeContentItem, CreatorContent } from "../types/api";
 import { hasDashboardAccess } from "../utils/permissions";
 
 const navItems = [
@@ -30,6 +31,7 @@ const navItems = [
   { label: "TIMES", to: "/comunidade" },
   { label: "RANKING", to: "/ranking" },
   { label: "NOTICIAS", to: "/noticias" },
+  { label: "CRIADORES", to: "/criadores" },
   { label: "LOJA", to: "/loja" },
 ];
 
@@ -56,10 +58,14 @@ export function Landing() {
   const identity = user ?? profile;
   const [featuredItems, setFeaturedItems] = useState<FeaturedHeroItem[]>([]);
   const [homeContent, setHomeContent] = useState<HomeContentItem | null>(null);
+  const [creatorLive, setCreatorLive] = useState<CreatorContent[]>([]);
+  const [creatorLatest, setCreatorLatest] = useState<CreatorContent[]>([]);
 
   useEffect(() => {
     void getFeaturedHeroItems().then(setFeaturedItems);
     void getActiveHomeContent().then(setHomeContent);
+    void getLiveCreators().then(setCreatorLive);
+    void getLatestCreatorContent().then(setCreatorLatest);
   }, []);
 
   const handleArenaEntry = () => {
@@ -224,6 +230,49 @@ export function Landing() {
             );
           })}
         </div>
+
+        <section className="stg-feature-shell mt-3 p-4 md:p-5">
+          <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="tactical-label mb-2">Comunidade em transmissao</p>
+              <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-white">
+                {creatorLive.length > 0 ? "Ao vivo agora" : "Ultimos videos dos criadores"}
+              </h2>
+            </div>
+            <Link to="/criadores" className="text-sm font-black uppercase text-[#c084fc] hover:text-white">
+              Ver todos
+            </Link>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {(creatorLive.length > 0 ? creatorLive : creatorLatest).slice(0, 3).map((content) => (
+              <a
+                key={content.id}
+                href={content.content_url || "/criadores"}
+                target={content.content_url ? "_blank" : undefined}
+                rel="noreferrer"
+                className={`stg-mode-card min-h-[140px] items-start ${content.is_live ? "border-[#ef4444]/55 shadow-[0_0_24px_rgba(239,68,68,0.18)]" : ""}`}
+              >
+                <div className="min-w-0">
+                  <span className={content.is_live ? "stg-badge-danger" : "stg-badge-purple"}>
+                    {content.is_live ? "AO VIVO" : content.platform}
+                  </span>
+                  <p className="mt-3 line-clamp-2 text-lg font-black uppercase tracking-[0.04em] text-white">
+                    {content.title || "Conteudo STG"}
+                  </p>
+                  <p className="mt-2 text-xs font-bold uppercase text-white/45">
+                    {content.creator?.display_name || content.creator?.username || "Criador STG"}
+                  </p>
+                </div>
+                <ChevronRight className="ml-auto mt-1 text-[#a855f7]" size={20} />
+              </a>
+            ))}
+          </div>
+          {creatorLive.length === 0 && creatorLatest.length === 0 && (
+            <div className="stg-hud-panel p-5 text-sm text-[#94a3b8]">
+              Criadores e videos aguardando sincronizacao com a API.
+            </div>
+          )}
+        </section>
 
         <footer className="stg-footer mt-3 grid items-center gap-6 p-4 md:grid-cols-[200px_1fr_auto] md:px-24">
           <BrandLogo imageClassName="h-16 w-20" showText={false} />
