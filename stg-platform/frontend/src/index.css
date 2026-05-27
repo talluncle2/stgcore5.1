@@ -1142,3 +1142,18 @@ textarea::placeholder {
 .cod-stat-box-label {
   @apply text-xs uppercase tracking-wider text-[#94a3b8] mt-1;
 }
+
+.stg-admin-input {
+  width: 100%;
+  border: 1px solid rgba(168, 85, 247, 0.22);
+  background: rgba(17, 24, 39, 0.92);
+  padding: 0.75rem 0.9rem;
+  color: #f8fafc;
+  font-size: 0.875rem;
+  font-weight: 700;
+  outline: none;
+}
+
+.stg-admin-input:focus {
+  border-color: rgba(168, 85, 247, 0.65);
+}

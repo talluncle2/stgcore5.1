@@ -36,10 +36,14 @@ export interface Product {
   price: number;
   price_coins?: number;
   price_real?: number;
+  sale_price_coins?: number;
+  sale_price_brl?: number;
+  discount_percent?: number;
   stock?: number;
   category?: string;
   featured?: boolean;
   is_featured?: boolean;
+  is_active?: boolean;
   destaque?: boolean;
   image_url?: string;
   imageUrl?: string;
@@ -185,6 +189,74 @@ export interface AdminMember {
 export type AdminMemberPayload = Partial<AdminMember>;
 export type ProductPayload = Partial<Product>;
 export type TournamentPayload = Partial<Tournament> & Record<string, unknown>;
+
+export type NewsCategory = "anuncio" | "temporada" | "torneio" | "sistema" | "jogo";
+
+export interface NewsItem {
+  id: string;
+  title: string;
+  subtitle?: string;
+  description: string;
+  category: NewsCategory;
+  imageUrl?: string;
+  badge?: string;
+  actionLabel?: string;
+  actionUrl?: string;
+  isActive: boolean;
+  isFeatured: boolean;
+  priority: number;
+  publishedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StoreItem {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  imageUrl?: string;
+  priceCoins?: number;
+  salePriceCoins?: number;
+  priceBrl?: number;
+  salePriceBrl?: number;
+  discountPercent?: number;
+  isActive: boolean;
+  isFeatured: boolean;
+  stock?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TournamentItem {
+  id: string;
+  title: string;
+  description?: string;
+  imageUrl?: string;
+  status?: string;
+  startDate?: string;
+  endDate?: string;
+  prize?: string;
+  isActive: boolean;
+  isFeatured: boolean;
+  priority: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FeaturedHeroItem {
+  id: string;
+  sourceType: "news" | "store" | "tournament";
+  title: string;
+  subtitle?: string;
+  description?: string;
+  imageUrl?: string;
+  badge?: string;
+  actionLabel: string;
+  actionUrl: string;
+  priority: number;
+  createdAt: string;
+}
 
 export interface ModerationConfig {
   automod_enabled?: boolean;

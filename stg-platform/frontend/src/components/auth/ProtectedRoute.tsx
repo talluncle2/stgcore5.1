@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { hasAdminAccess, hasDashboardAccess, hasModeratorAccess, hasSettingsAccess } from "../../utils/permissions";
+import { hasAdminAccess, hasDashboardAccess, hasModeratorAccess } from "../../utils/permissions";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;

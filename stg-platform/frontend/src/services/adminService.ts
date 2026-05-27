@@ -1,4 +1,4 @@
-import { authedApiRequest, ApiError } from "./api";
+import { authedApiRequest } from "./api";
 import { assertAdmin } from "./adminGuard";
 import { AdminSettings, AuthUser, DiscordMetrics } from "../types/api";
 

@@ -1,6 +1,6 @@
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
-  ChevronLeft,
   ChevronRight,
   Coins,
   Eye,
@@ -15,8 +15,11 @@ import {
   Users,
   Youtube,
 } from "lucide-react";
+import { HeroCarousel } from "../components/HeroCarousel";
 import { UserMenu } from "../components/layout/UserMenu";
 import { useAuth } from "../context/AuthContext";
+import { getFeaturedHeroItems } from "../services/featuredService";
+import { FeaturedHeroItem } from "../types/api";
 import { hasDashboardAccess } from "../utils/permissions";
 
 const navItems = [
@@ -49,6 +52,11 @@ export function Landing() {
   const { user, profile, isAuthenticated, loading, loginWithDiscord } = useAuth();
   const navigate = useNavigate();
   const identity = user ?? profile;
+  const [featuredItems, setFeaturedItems] = useState<FeaturedHeroItem[]>([]);
+
+  useEffect(() => {
+    void getFeaturedHeroItems().then(setFeaturedItems);
+  }, []);
 
   const handleArenaEntry = () => {
     if (!isAuthenticated) {
@@ -166,49 +174,23 @@ export function Landing() {
       <section className="relative z-20 mx-auto -mt-3 max-w-[1780px] px-5 pb-8 md:px-9">
         <div className="stg-feature-shell p-3 md:p-4">
           <div className="mb-3 px-2 text-base font-black uppercase tracking-[0.08em] text-white/80">
-            CAMPEONATO EM DESTAQUE
+            DESTAQUES STG
           </div>
-
-          <div className="relative overflow-hidden rounded-[6px] border border-white/10">
-            <div className="absolute inset-0 bg-[url('/assets/premium-theme/IMG/COD-HP_Primary-Tout_Desktop-LG.webp')] bg-cover bg-center" />
-            <div className="absolute inset-0 bg-gradient-to-r from-black via-black/45 to-black/20" />
-
-            <button className="stg-carousel-button left-5" aria-label="Anterior">
-              <ChevronLeft />
-            </button>
-            <button className="stg-carousel-button right-5" aria-label="Proximo">
-              <ChevronRight />
-            </button>
-
-            <div className="relative min-h-[248px] px-8 py-7 md:min-h-[274px] md:px-24 lg:px-40">
-              <span className="inline-flex items-center gap-2 rounded-md border border-white/15 bg-black/55 px-3 py-1 text-xs font-black uppercase text-white/90">
-                <span className="size-2 rounded-full bg-red-600 shadow-[0_0_12px_#dc2626]" />
-                AO VIVO
-              </span>
-              <div className="mt-8 max-w-[560px] text-center md:text-left">
-                <p className="text-3xl font-black uppercase tracking-[0.38em] text-white md:text-[34px]">COPA STG</p>
-                <h2 className="mt-1 text-5xl font-black uppercase leading-none text-white drop-shadow-[0_0_16px_rgba(255,255,255,0.2)] md:text-[64px]">
-                  ELITE LEAGUE
-                </h2>
-                <p className="mt-2 text-2xl font-black uppercase tracking-[0.12em] text-[#a855f7] md:text-[28px]">
-                  TEMPORADA 2024
-                </p>
-                <p className="mx-auto mt-4 max-w-[360px] text-base text-white/78 md:mx-0">
-                  As melhores equipes. Batalhas epicas. So uma sera coroada campea.
-                </p>
-                <Link to="/torneios" className="stg-watch-button mt-5 inline-flex items-center gap-2">
-                  ASSISTA AGORA
-                  <span className="grid size-4 place-items-center rounded-sm border border-[#a855f7] text-[10px]">▶</span>
-                </Link>
-              </div>
-
-              <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
-                <span className="h-2 w-4 rounded-full bg-[#a855f7]" />
-                <span className="size-2 rounded-full bg-white/25" />
-                <span className="size-2 rounded-full bg-white/25" />
-              </div>
-            </div>
-          </div>
+          <HeroCarousel
+            compact
+            slides={featuredItems.map((item) => ({
+              id: item.id,
+              title: item.title,
+              subtitle: item.subtitle,
+              description: item.description,
+              imageUrl: item.imageUrl,
+              badge: item.badge,
+              actionLabel: item.actionLabel,
+              actionUrl: item.actionUrl,
+            }))}
+            fallbackTitle="Destaques em preparacao"
+            fallbackDescription="Itens marcados como destaque em Noticias, Loja e Torneios aparecem automaticamente aqui."
+          />
         </div>
 
         <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5">

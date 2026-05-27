@@ -3,7 +3,6 @@ import {
   AlertCircle,
   Bot,
   Clock,
-  Gauge,
   RadioTower,
   RefreshCw,
   ShieldCheck,

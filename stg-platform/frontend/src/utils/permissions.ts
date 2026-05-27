@@ -103,3 +103,8 @@ export function hasSettingsAccess(user: PermissionUser): boolean {
     ["admin", "administrator"].includes(value)
   );
 }
+
+export function canManageContent(user: PermissionUser): boolean {
+  if (!user) return false;
+  return hasDashboardAccess(user) || hasAdminAccess(user) || hasModeratorAccess(user);
+}

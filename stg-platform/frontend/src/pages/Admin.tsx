@@ -154,11 +154,11 @@ export function Admin() {
         )}
 
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          {[
+          {([
             ["Membros", members.length, Users],
             ["Cargos", roles.length, ShieldCheck],
             ["Eventos", events.length, RefreshCw],
-          ].map(([label, value, Icon]) => (
+          ] as const).map(([label, value, Icon]) => (
             <div key={String(label)} className="stg-hud-panel p-4">
               <div className="mb-3 flex items-center gap-2 text-[#a855f7]">
                 <Icon size={18} />

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   Activity,
   AlertCircle,
@@ -233,6 +234,21 @@ export function Settings() {
         </section>
 
         <section className="cod-mission-panel">
+          <div className="cod-text-military mb-4 text-sm text-[#38bdf8]">GESTAO DE CONTEUDO</div>
+          <div className="grid gap-3 md:grid-cols-3">
+            {[
+              ["Noticias", "/admin/noticias"],
+              ["Loja", "/admin/loja"],
+              ["Torneios", "/admin/torneios"],
+            ].map(([label, to]) => (
+              <Link key={to} to={to} className="border border-[#a855f7]/25 bg-[#111827]/80 px-4 py-3 text-center text-sm font-black uppercase text-[#c084fc] transition-colors hover:border-[#a855f7]/60 hover:bg-[#a855f7]/15">
+                {label}
+              </Link>
+            ))}
+          </div>
+        </section>
+
+        <section className="cod-mission-panel">
           <div className="cod-text-military mb-4 text-sm text-[#f97316]">INFORMACOES DO SISTEMA</div>
           <div className="cod-stats-grid">
             <div className="cod-stat-box">
@@ -257,7 +273,7 @@ export function Settings() {
           <div className="mt-4 flex items-start gap-2 border border-[#f97316]/25 bg-[#f97316]/10 p-3 text-xs text-[#fed7aa]">
             <AlertCircle className="mt-0.5 shrink-0" size={16} />
             <p>
-              Secrets como BOT_API_KEY, JWT_SECRET_KEY, DATABASE_URL e tokens Discord nao sao exibidos nem editados pelo frontend.
+              Secrets de bot, autenticacao, banco e integracoes Discord nao sao exibidos nem editados pelo frontend.
             </p>
           </div>
         </section>

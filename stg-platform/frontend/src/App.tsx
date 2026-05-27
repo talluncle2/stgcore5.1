@@ -17,6 +17,7 @@ import { Profile } from './pages/Profile';
 import { AuthCallback } from './pages/AuthCallback';
 import { Community } from './pages/Community';
 import { News } from './pages/News';
+import { ContentManagerPage } from './pages/ContentManagerPage';
 
 function App() {
   return (
@@ -86,6 +87,14 @@ function App() {
             element={
               <ProtectedRoute requireDashboardAccess>
                 <Admin />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/:section"
+            element={
+              <ProtectedRoute requireDashboardAccess>
+                <ContentManagerPage />
               </ProtectedRoute>
             }
           />
