@@ -21,9 +21,9 @@ import { UserMenu } from "./UserMenu";
 const publicLinks = [
   { label: "Inicio", path: "/", icon: Crosshair },
   { label: "Torneios", path: "/torneios", icon: Trophy },
-  { label: "Times/Jogadores", path: "/players", icon: Users },
+  { label: "Times/Jogadores", path: "/comunidade", icon: Users },
   { label: "Ranking", path: "/ranking", icon: Gauge },
-  { label: "Noticias", path: "/comunidade", icon: Newspaper },
+  { label: "Noticias", path: "/noticias", icon: Newspaper },
   { label: "Loja", path: "/loja", icon: ShoppingCart },
 ];
 

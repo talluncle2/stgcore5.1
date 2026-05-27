@@ -57,6 +57,21 @@ const pageMeta: Record<string, { title: string; subtitle: string; code: string }
     subtitle: "Base de operadores, membros e estatisticas da comunidade.",
     code: "SQUAD",
   },
+  comunidade: {
+    title: "Times e Jogadores",
+    subtitle: "Base publica da comunidade, operadores e indicadores sincronizados pela API.",
+    code: "SQUAD",
+  },
+  times: {
+    title: "Times e Jogadores",
+    subtitle: "Base publica da comunidade, operadores e indicadores sincronizados pela API.",
+    code: "SQUAD",
+  },
+  noticias: {
+    title: "Noticias",
+    subtitle: "Comunicados, operacoes ativas e atualizacoes oficiais da STG.",
+    code: "NEWS",
+  },
   settings: {
     title: "Configuracoes",
     subtitle: "Preferencias operacionais e conexoes externas.",

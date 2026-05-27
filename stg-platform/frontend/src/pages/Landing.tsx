@@ -24,7 +24,7 @@ const navItems = [
   { label: "TORNEIOS", to: "/torneios" },
   { label: "TIMES", to: "/comunidade" },
   { label: "RANKING", to: "/ranking" },
-  { label: "NOTICIAS", to: "/comunidade" },
+  { label: "NOTICIAS", to: "/noticias" },
   { label: "LOJA", to: "/loja" },
 ];
 

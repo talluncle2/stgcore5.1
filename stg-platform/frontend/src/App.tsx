@@ -16,6 +16,7 @@ import { SignUp } from './pages/SignUp';
 import { Profile } from './pages/Profile';
 import { AuthCallback } from './pages/AuthCallback';
 import { Community } from './pages/Community';
+import { News } from './pages/News';
 
 function App() {
   return (
@@ -34,6 +35,8 @@ function App() {
           <Route path="/signup" element={<SignUp />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/comunidade" element={<Community />} />
+          <Route path="/times" element={<Community />} />
+          <Route path="/noticias" element={<News />} />
           <Route
             path="/preview"
             element={
