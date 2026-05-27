@@ -1,8 +1,26 @@
-import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { AuthUser } from "../types/api";
-import { clearAuthToken, getMe, API_BASE_URL, AUTH_TOKEN_KEY } from "../services/api";
+import {
+  clearAuthToken,
+  getMe,
+  API_BASE_URL,
+  AUTH_TOKEN_KEY,
+  setAuthToken,
+} from "../services/api";
 import { Profile } from "../lib/supabase";
-import { hasAdminAccess, hasDashboardAccess, hasModeratorAccess } from "../utils/permissions";
+import {
+  hasAdminAccess,
+  hasDashboardAccess,
+  hasModeratorAccess,
+} from "../utils/permissions";
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -20,11 +38,40 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   signInWithDiscord: () => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signUp: (email: string, password: string, username: string) => Promise<{ error: Error | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    username: string
+  ) => Promise<{ error: Error | null }>;
   updateProfile: (updates: Partial<Profile>) => Promise<{ error: Error | null }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+function getStoredToken(): string | null {
+  return (
+    localStorage.getItem(AUTH_TOKEN_KEY) ||
+    localStorage.getItem("stg_token") ||
+    localStorage.getItem("token") ||
+    localStorage.getItem("authToken")
+  );
+}
+
+function persistToken(token: string) {
+  localStorage.setItem(AUTH_TOKEN_KEY, token);
+  localStorage.setItem("stg_token", token);
+  localStorage.setItem("token", token);
+  localStorage.setItem("authToken", token);
+  setAuthToken(token);
+}
+
+function clearStoredToken() {
+  clearAuthToken();
+  localStorage.removeItem(AUTH_TOKEN_KEY);
+  localStorage.removeItem("stg_token");
+  localStorage.removeItem("token");
+  localStorage.removeItem("authToken");
+}
 
 function profileFromUser(user: AuthUser | null): Profile | null {
   if (!user) return null;
@@ -33,8 +80,9 @@ function profileFromUser(user: AuthUser | null): Profile | null {
     id: String(user.id ?? user.discord_id ?? ""),
     email: user.email || "",
     username:
-      user.username ||
+      user.display_name ||
       user.global_name ||
+      user.username ||
       user.discord_username ||
       user.email?.split("@")[0] ||
       "Usuario",
@@ -45,7 +93,9 @@ function profileFromUser(user: AuthUser | null): Profile | null {
       ? "admin"
       : user.is_moderator || user.is_staff
         ? "moderator"
-        : "user",
+        : user.can_access_dashboard
+          ? "staff"
+          : "user",
     xp: user.xp ?? 0,
     level: user.level ?? 1,
     coins: user.coins ?? 0,
@@ -60,30 +110,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refreshUser = useCallback(async () => {
     setLoading(true);
-    const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+    const token = getStoredToken();
+
     if (!token) {
       setUser(null);
       setLoading(false);
       return;
     }
 
+    /**
+     * Garante que qualquer token encontrado em chave antiga
+     * seja salvo também na chave oficial usada pelo api.ts.
+     */
+    persistToken(token);
+
     try {
       const me = await getMe();
+
       if (me) {
         setUser(me);
+
         if (import.meta.env.DEV) {
-          console.log("Usuario carregado", {
+          console.log("Usuario carregado via /auth/me", {
+            discord_id: me.discord_id,
             role: me.role,
+            roles: me.roles,
+            role_ids: me.role_ids,
             is_admin: me.is_admin === true,
             is_moderator: me.is_moderator === true,
+            can_access_dashboard: me.can_access_dashboard === true,
           });
         }
       } else {
-        clearAuthToken();
+        clearStoredToken();
         setUser(null);
       }
-    } catch {
-      clearAuthToken();
+    } catch (error) {
+      console.error("Erro ao buscar /auth/me:", error);
+      clearStoredToken();
       setUser(null);
     } finally {
       setLoading(false);
@@ -104,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   async function logout() {
-    clearAuthToken();
+    clearStoredToken();
     setUser(null);
     window.location.href = "/";
   }
@@ -116,24 +181,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signIn(email: string, password: string) {
     void email;
     void password;
-    return { error: new Error("Login por email nao esta habilitado neste frontend. Use Discord.") };
+    return {
+      error: new Error("Login por email nao esta habilitado neste frontend. Use Discord."),
+    };
   }
 
   async function signUp() {
-    return { error: new Error("Cadastro pelo frontend ainda nao esta habilitado nesta fase.") };
+    return {
+      error: new Error("Cadastro pelo frontend ainda nao esta habilitado nesta fase."),
+    };
   }
 
   async function updateProfile() {
-    return { error: new Error("Edicao de perfil ainda nao esta habilitada nesta fase.") };
+    return {
+      error: new Error("Edicao de perfil ainda nao esta habilitada nesta fase."),
+    };
   }
 
   const profile = useMemo(() => profileFromUser(user), [user]);
+
   const isAuthenticated = !!user;
   const identity = user ?? profile;
+
   const isAdmin = hasAdminAccess(identity);
   const isModerator = hasModeratorAccess(identity);
   const canAccessDashboard = hasDashboardAccess(identity);
-  const token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+  const token = getStoredToken();
   const session = token ? { access_token: token } : null;
 
   const value: AuthContextType = {
@@ -161,8 +235,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
+
   if (context === undefined) {
     throw new Error("useAuth must be used within an AuthProvider");
   }
+
   return context;
 }
