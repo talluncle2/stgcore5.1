@@ -1,8 +1,8 @@
 import { AuthUser } from "../types/api";
-import { hasAdminAccess } from "../utils/permissions";
+import { canManageContent } from "../utils/permissions";
 
 export function assertAdmin(user: AuthUser | null | undefined): void {
-  if (!hasAdminAccess(user)) {
-    throw new Error("Apenas administradores podem executar esta acao.");
+  if (!canManageContent(user)) {
+    throw new Error("Apenas administradores, moderadores ou staff autorizado podem executar esta acao.");
   }
 }

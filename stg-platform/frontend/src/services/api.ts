@@ -12,7 +12,7 @@ import type {
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const API_BASE_URL = rawApiBaseUrl
   ? String(rawApiBaseUrl).replace(/\/$/, "")
-  : "https://stgcore-40--lizmaciel159.replit.app";
+  : "";
 const AUTH_TOKEN_KEY = "stg_auth_token";
 
 function buildUrl(path: string): string {
@@ -47,6 +47,10 @@ export class ApiError extends Error {
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit, fallback?: T): Promise<T> {
+  if (!API_BASE_URL) {
+    return fallback as T;
+  }
+
   try {
     const response = await fetch(buildUrl(path), {
       ...init,
@@ -68,6 +72,10 @@ async function fetchJson<T>(path: string, init?: RequestInit, fallback?: T): Pro
 }
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  if (!API_BASE_URL) {
+    throw new ApiError("VITE_API_BASE_URL nao esta configurado.");
+  }
+
   try {
     const response = await fetch(buildUrl(path), {
       ...init,
@@ -109,6 +117,8 @@ export async function authedApiRequest<T>(path: string, init?: RequestInit): Pro
 }
 
 async function fetchAuthedJson<T>(path: string, fallback: T): Promise<T> {
+  if (!API_BASE_URL) return fallback;
+
   const token = getAuthToken();
   if (!token) return fallback;
 

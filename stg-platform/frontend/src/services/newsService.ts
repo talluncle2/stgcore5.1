@@ -1,4 +1,4 @@
-import { apiRequest } from "./api";
+import { apiRequest, authedApiRequest } from "./api";
 import { deleteContent, readContent, upsertContent } from "./contentStorage";
 import { NewsItem } from "../types/api";
 
@@ -152,9 +152,24 @@ export async function getFeaturedNewsItems(): Promise<NewsItem[]> {
 }
 
 export async function saveNewsItem(payload: Partial<NewsItem> & { id?: string }): Promise<NewsItem> {
+  try {
+    const path = payload.id ? `/admin/news/${payload.id}` : "/admin/news";
+    return await authedApiRequest<NewsItem>(path, {
+      method: payload.id ? "PUT" : "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    // TODO: replace local fallback when Replit API exposes /admin/news.
+  }
   return upsertContent<NewsItem>(KEY, defaultNewsItems, payload);
 }
 
 export async function deleteNewsItem(id: string): Promise<void> {
+  try {
+    await authedApiRequest<void>(`/admin/news/${id}`, { method: "DELETE" });
+    return;
+  } catch {
+    // TODO: replace local fallback when Replit API exposes /admin/news/:id.
+  }
   deleteContent<NewsItem>(KEY, defaultNewsItems, id);
 }

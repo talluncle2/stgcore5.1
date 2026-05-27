@@ -101,9 +101,24 @@ export async function getFeaturedTournamentItems(): Promise<TournamentItem[]> {
 }
 
 export async function saveTournamentItem(payload: Partial<TournamentItem> & { id?: string }): Promise<TournamentItem> {
+  try {
+    const path = payload.id ? `/admin/tournaments/${payload.id}` : "/admin/tournaments";
+    return await authedApiRequest<TournamentItem>(path, {
+      method: payload.id ? "PUT" : "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    // TODO: replace local fallback when Replit API exposes tournament content management.
+  }
   return upsertContent<TournamentItem>(KEY, defaultTournamentItems, payload);
 }
 
 export async function deleteTournamentItem(id: string): Promise<void> {
+  try {
+    await authedApiRequest<void>(`/admin/tournaments/${id}`, { method: "DELETE" });
+    return;
+  } catch {
+    // TODO: replace local fallback when Replit API exposes /admin/tournaments/:id.
+  }
   deleteContent<TournamentItem>(KEY, defaultTournamentItems, id);
 }

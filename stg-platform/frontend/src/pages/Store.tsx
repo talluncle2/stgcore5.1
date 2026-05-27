@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import { Filter, Package, ShoppingCart } from "lucide-react";
+import { Edit3, Filter, Package, ShoppingCart } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Layout } from "../components/layout/Layout";
+import { useAuth } from "../context/AuthContext";
 import { getStoreItems } from "../services/storeService";
 import { StoreItem } from "../types/api";
+import { canManageContent } from "../utils/permissions";
 
 function formatBrl(value?: number) {
   if (!value) return null;
@@ -23,6 +26,7 @@ export function Store() {
   const [products, setProducts] = useState<StoreItem[]>([]);
   const [category, setCategory] = useState("todos");
   const [loading, setLoading] = useState(true);
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     async function loadProducts() {
@@ -42,12 +46,20 @@ export function Store() {
   return (
     <Layout>
       <div className="flex flex-col gap-8">
-        <div>
-          <p className="tactical-label mb-2">Arsenal de recompensas</p>
-          <h1 className="mb-2 text-4xl font-black uppercase tracking-[0.08em] text-[#f8fafc]">
-            Loja Tatica
-          </h1>
-          <p className="text-[#94a3b8]">Itens com economia hibrida em STG Coins e BRL.</p>
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="tactical-label mb-2">Arsenal de recompensas</p>
+            <h1 className="mb-2 text-4xl font-black uppercase tracking-[0.08em] text-[#f8fafc]">
+              Loja Tatica
+            </h1>
+            <p className="text-[#94a3b8]">Itens com economia hibrida em STG Coins e BRL.</p>
+          </div>
+          {canManageContent(user ?? profile) && (
+            <Link to="/admin/loja" className="stg-button-secondary inline-flex items-center justify-center gap-2 px-4 py-3 text-sm">
+              <Edit3 size={16} />
+              Gerir loja
+            </Link>
+          )}
         </div>
 
         <div className="flex flex-wrap gap-2">

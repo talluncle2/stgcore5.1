@@ -123,9 +123,24 @@ export async function getFeaturedStoreItems(): Promise<StoreItem[]> {
 }
 
 export async function saveStoreItem(payload: Partial<StoreItem> & { id?: string }): Promise<StoreItem> {
+  try {
+    const path = payload.id ? `/admin/products/${payload.id}` : "/admin/products";
+    return await authedApiRequest<StoreItem>(path, {
+      method: payload.id ? "PUT" : "POST",
+      body: JSON.stringify(payload),
+    });
+  } catch {
+    // TODO: replace local fallback when Replit API exposes product content management.
+  }
   return upsertContent<StoreItem>(KEY, defaultStoreItems, payload);
 }
 
 export async function deleteStoreItem(id: string): Promise<void> {
+  try {
+    await authedApiRequest<void>(`/admin/products/${id}`, { method: "DELETE" });
+    return;
+  } catch {
+    // TODO: replace local fallback when Replit API exposes /admin/products/:id.
+  }
   deleteContent<StoreItem>(KEY, defaultStoreItems, id);
 }

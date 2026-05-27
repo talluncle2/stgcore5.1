@@ -99,6 +99,14 @@ function App() {
             }
           />
           <Route
+            path="/configuracoes/:section"
+            element={
+              <ProtectedRoute requireDashboardAccess>
+                <ContentManagerPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/moderation"
             element={
               <ProtectedRoute requireDashboardAccess>
