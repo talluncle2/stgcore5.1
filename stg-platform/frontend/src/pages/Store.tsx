@@ -118,15 +118,12 @@ export function Store() {
                   </div>
 
                   <button
-                    disabled={(product.stock ?? 0) === 0}
-                    className={`tactical-edge flex w-full items-center justify-center gap-2 px-4 py-2 font-black uppercase tracking-[0.06em] transition-all rounded-lg ${
-                      (product.stock ?? 0) > 0
-                        ? "stg-button-primary glow-purple"
-                        : "cursor-not-allowed bg-[#111827] text-[#475569] border border-[#1e293b]"
-                    }`}
+                    disabled
+                    title="Loja aguardando backend"
+                    className="tactical-edge flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-[#1e293b] bg-[#111827] px-4 py-2 font-black uppercase tracking-[0.06em] text-[#475569]"
                   >
                     <Package size={16} />
-                    {(product.stock ?? 0) > 0 ? "Comprar" : "Indisponível"}
+                    Loja aguardando backend
                   </button>
                 </div>
               </div>

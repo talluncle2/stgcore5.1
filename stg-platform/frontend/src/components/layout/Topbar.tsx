@@ -1,13 +1,57 @@
-import { useState, useEffect } from "react";
-import { Bell, Circle, Crosshair } from "lucide-react";
-import { getHealth } from "../../services/api";
+import { useEffect, useState } from "react";
+import { Link, NavLink } from "react-router-dom";
+import {
+  Bell,
+  Circle,
+  Crosshair,
+  Gauge,
+  Menu,
+  Newspaper,
+  ShieldCheck,
+  ShoppingCart,
+  Trophy,
+  Users,
+  X,
+} from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { getHealth } from "../../services/api";
+import { hasDashboardAccess, hasSettingsAccess } from "../../utils/permissions";
 import { UserMenu } from "./UserMenu";
+
+const publicLinks = [
+  { label: "Inicio", path: "/", icon: Crosshair },
+  { label: "Torneios", path: "/torneios", icon: Trophy },
+  { label: "Times/Jogadores", path: "/players", icon: Users },
+  { label: "Ranking", path: "/ranking", icon: Gauge },
+  { label: "Noticias", path: "/comunidade", icon: Newspaper },
+  { label: "Loja", path: "/loja", icon: ShoppingCart },
+];
+
+type NavItem = {
+  label: string;
+  path: string;
+  icon: typeof Crosshair;
+};
 
 export function Topbar() {
   const [apiStatus, setApiStatus] = useState<"online" | "offline">("offline");
   const [apiLoading, setApiLoading] = useState(true);
-  const { isAuthenticated, loginWithDiscord } = useAuth();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const { user, profile, isAuthenticated, loginWithDiscord } = useAuth();
+
+  const identity = user ?? profile;
+  const canOpenDashboard = hasDashboardAccess(identity);
+  const canOpenSettings = hasSettingsAccess(identity);
+  const adminLinks: NavItem[] = canOpenDashboard
+    ? [
+        { label: "Dashboard", path: "/dashboard", icon: Gauge },
+        { label: "Admin", path: "/admin", icon: ShieldCheck },
+        { label: "Moderacao", path: "/moderation", icon: ShieldCheck },
+        ...(canOpenSettings
+          ? [{ label: "Configuracoes", path: "/settings", icon: ShieldCheck }]
+          : []),
+      ]
+    : [];
 
   useEffect(() => {
     const checkHealth = async () => {
@@ -26,25 +70,69 @@ export function Topbar() {
     return () => clearInterval(interval);
   }, []);
 
+  function renderLink(item: NavItem, compact = false) {
+    const Icon = item.icon;
+
+    return (
+      <NavLink
+        key={item.path}
+        to={item.path}
+        onClick={() => setMobileOpen(false)}
+        className={({ isActive }) =>
+          [
+            "flex items-center gap-2 border border-transparent px-3 py-2 text-xs font-black uppercase tracking-[0.08em] transition-colors",
+            compact ? "w-full" : "h-10",
+            isActive
+              ? "border-[#a855f7]/45 bg-[#a855f7]/15 text-white"
+              : "text-[#94a3b8] hover:border-[#a855f7]/30 hover:bg-[#111827]/80 hover:text-white",
+          ].join(" ")
+        }
+      >
+        <Icon size={15} />
+        <span>{item.label}</span>
+      </NavLink>
+    );
+  }
+
   return (
-    <header className="stg-premium-topbar fixed left-0 right-0 top-0 z-30 flex h-16 items-center border-b border-[#a855f7]/20 bg-[#050608]/94 px-4 pl-16 text-center shadow-lg shadow-black/25 backdrop-blur-xl lg:left-64 lg:px-6">
-      <div className="flex-1 flex items-center justify-between">
+    <header className="stg-premium-topbar fixed left-0 right-0 top-0 z-30 border-b border-[#a855f7]/20 bg-[#050608]/94 text-center shadow-lg shadow-black/25 backdrop-blur-xl">
+      <div className="flex h-16 items-center justify-between gap-3 px-3 lg:px-6">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="tactical-edge hidden size-9 items-center justify-center border border-[#a855f7]/35 bg-[#111827] text-[#a855f7] sm:flex">
-            <Crosshair size={18} />
-          </div>
-          <div className="min-w-0">
-            <p className="tactical-label hidden sm:block">COMANDO STG</p>
-            <h1 className="text-left text-lg font-black uppercase tracking-[0.07em] gradient-text sm:text-xl">
-              <span className="sm:hidden">COMANDO</span>
-              <span className="hidden sm:inline">CENTRO DE COMANDO</span>
-            </h1>
-          </div>
+          <button
+            type="button"
+            onClick={() => setMobileOpen((value) => !value)}
+            className="tactical-edge flex size-10 items-center justify-center border border-[#a855f7]/30 bg-[#111827]/85 text-[#f8fafc] lg:hidden"
+            aria-label="Abrir navegacao"
+          >
+            {mobileOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
+
+          <Link to="/" className="flex min-w-0 items-center gap-3" onClick={() => setMobileOpen(false)}>
+            <div className="tactical-edge hidden size-9 items-center justify-center border border-[#a855f7]/35 bg-[#111827] text-[#a855f7] sm:flex">
+              <Crosshair size={18} />
+            </div>
+            <div className="min-w-0">
+              <p className="tactical-label hidden sm:block">SUPREMO TRIBUNAL GAMER</p>
+              <h1 className="text-left text-lg font-black uppercase tracking-[0.07em] gradient-text sm:text-xl">
+                STG WARZONE
+              </h1>
+            </div>
+          </Link>
         </div>
 
-        <div className="flex shrink-0 items-center gap-2 sm:gap-4">
-          {/* API Status */}
-          <div className="tactical-edge flex items-center gap-2 border border-[#84cc16]/25 bg-[#111827]/90 px-4 py-2">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex">
+          {publicLinks.map((item) => renderLink(item))}
+          {adminLinks.length > 0 && <span className="mx-1 h-7 border-l border-[#a855f7]/20" />}
+          {adminLinks.map((item) => renderLink(item))}
+        </nav>
+
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex xl:hidden">
+          {publicLinks.slice(0, 4).map((item) => renderLink(item))}
+          {adminLinks.slice(0, 3).map((item) => renderLink(item))}
+        </nav>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <div className="tactical-edge hidden items-center gap-2 border border-[#84cc16]/25 bg-[#111827]/90 px-3 py-2 sm:flex">
             <Circle
               size={8}
               className={`fill-current ${
@@ -60,12 +148,14 @@ export function Topbar() {
             </span>
           </div>
 
-          {/* Notifications */}
-          <button className="tactical-edge hidden border border-[#a855f7]/20 bg-[#111827]/80 p-2 text-[#94a3b8] transition-colors hover:border-[#a855f7]/45 hover:text-[#a855f7] sm:block">
+          <button
+            type="button"
+            className="tactical-edge hidden border border-[#a855f7]/20 bg-[#111827]/80 p-2 text-[#94a3b8] transition-colors hover:border-[#a855f7]/45 hover:text-[#a855f7] sm:block"
+            title="Modulo aguardando backend"
+          >
             <Bell size={20} />
           </button>
 
-          {/* User Menu or Login Link */}
           {!isAuthenticated && (
             <button
               type="button"
@@ -78,6 +168,25 @@ export function Topbar() {
           {isAuthenticated && <UserMenu />}
         </div>
       </div>
+
+      {mobileOpen && (
+        <div className="border-t border-[#a855f7]/20 bg-[#050608]/98 px-3 py-3 shadow-xl shadow-black/40 lg:hidden">
+          <div className="grid gap-2">
+            {publicLinks.map((item) => renderLink(item, true))}
+            {adminLinks.length > 0 && <div className="my-1 border-t border-[#a855f7]/20" />}
+            {adminLinks.map((item) => renderLink(item, true))}
+          </div>
+          <div className="mt-3 flex items-center gap-2 border border-[#84cc16]/20 bg-[#111827]/75 px-3 py-2">
+            <Circle
+              size={8}
+              className={`fill-current ${apiStatus === "online" ? "text-[#84cc16]" : "text-[#f97316]"}`}
+            />
+            <span className="text-xs font-bold uppercase tracking-[0.08em] text-[#94a3b8]">
+              {apiLoading ? "Verificando API" : apiStatus === "online" ? "API Online" : "API Offline"}
+            </span>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

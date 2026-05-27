@@ -180,13 +180,16 @@ export function Players() {
 
               {/* Action Buttons */}
               <div className="grid grid-cols-2 gap-3">
-                <button className="px-4 py-2 rounded-lg bg-[#a855f7] text-white font-black text-xs uppercase hover:bg-[#7c3aed] transition-colors">
+                <button disabled title="Modulo aguardando backend" className="cursor-not-allowed rounded-lg bg-[#111827] px-4 py-2 text-xs font-black uppercase text-[#64748b] opacity-80">
                   Ver Perfil Completo
                 </button>
-                <button className="px-4 py-2 rounded-lg border-2 border-[#2d3748] text-[#a855f7] font-black text-xs uppercase hover:border-[#a855f7] transition-colors">
+                <button disabled title="Modulo aguardando backend" className="cursor-not-allowed rounded-lg border-2 border-[#2d3748] px-4 py-2 text-xs font-black uppercase text-[#64748b] opacity-80">
                   Histórico
                 </button>
               </div>
+              <p className="mt-3 text-center text-xs font-bold text-[#94a3b8]">
+                Dados competitivos aguardando backend
+              </p>
             </div>
           </div>
         )}

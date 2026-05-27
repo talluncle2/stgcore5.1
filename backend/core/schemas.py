@@ -1,0 +1,216 @@
+"""Pydantic Schemas for API Validation"""
+from datetime import datetime
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field
+
+# Auth Schemas
+class AuthUser(BaseModel):
+    id: Optional[str] = None
+    discord_id: Optional[int] = None
+    discord_username: Optional[str] = None
+    global_name: Optional[str] = None
+    display_name: Optional[str] = None
+    username: Optional[str] = None
+    email: Optional[str] = None
+    avatar_url: Optional[str] = None
+    discord_avatar_url: Optional[str] = None
+    image_url: Optional[str] = None
+    role: Optional[str] = None
+    roles: Optional[List[Any]] = None
+    role_ids: Optional[List[Any]] = None
+    roles_json: Optional[Any] = None
+    discord_roles: Optional[List[Any]] = None
+    last_discord_sync_at: Optional[datetime] = None
+    is_admin: bool = False
+    is_staff: bool = False
+    is_moderator: bool = False
+    can_access_dashboard: bool = False
+    coins: Optional[int] = 0
+    xp: Optional[int] = 0
+    level: Optional[int] = 1
+    
+    class Config:
+        from_attributes = True
+
+class AuthResponse(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int = 86400
+    user: AuthUser
+
+# Discord Member Sync Schemas
+class DiscordMemberSchema(BaseModel):
+    discord_id: int
+    guild_id: int
+    username: Optional[str] = None
+    discord_username: Optional[str] = None
+    global_name: Optional[str] = None
+    display_name: Optional[str] = None
+    nick: Optional[str] = None
+    avatar_url: Optional[str] = None
+    joined_at: Optional[datetime] = None
+    role_ids: Optional[List[int]] = []
+    roles_json: Optional[Dict[str, Any]] = {}
+    is_bot: bool = False
+    status: Optional[str] = None
+    is_admin: bool = False
+    is_moderator: bool = False
+    can_access_dashboard: bool = False
+    
+    class Config:
+        from_attributes = True
+
+class DiscordRoleSchema(BaseModel):
+    guild_id: int
+    role_id: int
+    name: str
+    color: Optional[int] = None
+    position: Optional[int] = None
+    permissions: Optional[int] = None
+    mentionable: bool = False
+    
+    class Config:
+        from_attributes = True
+
+class DiscordChannelSchema(BaseModel):
+    guild_id: int
+    channel_id: int
+    name: str
+    type: Optional[str] = None
+    position: Optional[int] = None
+    category_id: Optional[int] = None
+    nsfw: bool = False
+    
+    class Config:
+        from_attributes = True
+
+class DiscordGuildSchema(BaseModel):
+    guild_id: int
+    guild_name: str
+    icon_url: Optional[str] = None
+    owner_id: Optional[int] = None
+    member_count: int = 0
+    human_members: int = 0
+    bot_members: int = 0
+    online_members: int = 0
+    channels_total: int = 0
+    text_channels: int = 0
+    voice_channels: int = 0
+    roles_count: int = 0
+    emojis: int = 0
+    boosts: int = 0
+    premium_tier: int = 0
+    latency_ms: Optional[float] = None
+    uptime_seconds: Optional[int] = None
+    
+    class Config:
+        from_attributes = True
+
+class DiscordBotStatusSchema(BaseModel):
+    bot_id: int
+    bot_name: Optional[str] = None
+    guild_id: Optional[int] = None
+    status: Optional[str] = None
+    latency_ms: Optional[float] = None
+    uptime_seconds: Optional[int] = None
+    guild_count: Optional[int] = None
+    version: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+class DiscordMetricSchema(BaseModel):
+    guild_id: int
+    metrics_json: Dict[str, Any] = {}
+    
+    class Config:
+        from_attributes = True
+
+class DiscordEventSchema(BaseModel):
+    guild_id: int
+    event_type: str
+    discord_id: Optional[int] = None
+    channel_id: Optional[int] = None
+    payload_json: Optional[Dict[str, Any]] = {}
+    
+    class Config:
+        from_attributes = True
+
+# Bot Sync Request Schemas
+class BotSyncMemberRequest(BaseModel):
+    guild_id: int
+    discord_id: int
+    username: Optional[str] = None
+    discord_username: Optional[str] = None
+    global_name: Optional[str] = None
+    display_name: Optional[str] = None
+    nick: Optional[str] = None
+    avatar_url: Optional[str] = None
+    joined_at: Optional[datetime] = None
+    role_ids: Optional[List[int]] = []
+    roles_json: Optional[Dict[str, Any]] = {}
+    is_bot: bool = False
+    status: Optional[str] = None
+
+class BotSyncMembersRequest(BaseModel):
+    guild_id: int
+    members: List[BotSyncMemberRequest]
+
+class BotSyncRolesRequest(BaseModel):
+    guild_id: int
+    roles: List[DiscordRoleSchema]
+
+class BotSyncChannelsRequest(BaseModel):
+    guild_id: int
+    channels: List[DiscordChannelSchema]
+
+class BotSyncGuildRequest(BaseModel):
+    guild_id: int
+    guild_name: str
+    icon_url: Optional[str] = None
+    owner_id: Optional[int] = None
+    member_count: int = 0
+    human_members: int = 0
+    bot_members: int = 0
+    online_members: int = 0
+    channels_total: int = 0
+    text_channels: int = 0
+    voice_channels: int = 0
+    roles_count: int = 0
+    emojis: int = 0
+    boosts: int = 0
+    premium_tier: int = 0
+    latency_ms: Optional[float] = None
+    uptime_seconds: Optional[int] = None
+
+class BotSyncMetricsRequest(BaseModel):
+    guild_id: int
+    metrics_json: Dict[str, Any]
+
+class BotSyncStatusRequest(BaseModel):
+    bot_id: int
+    bot_name: Optional[str] = None
+    guild_id: Optional[int] = None
+    status: Optional[str] = None
+    latency_ms: Optional[float] = None
+    uptime_seconds: Optional[int] = None
+    guild_count: Optional[int] = None
+    version: Optional[str] = None
+
+class BotSyncEventRequest(BaseModel):
+    guild_id: int
+    event_type: str
+    discord_id: Optional[int] = None
+    channel_id: Optional[int] = None
+    payload_json: Optional[Dict[str, Any]] = {}
+
+# Response Schemas
+class SuccessResponse(BaseModel):
+    success: bool = True
+    message: Optional[str] = None
+    data: Optional[Dict[str, Any]] = None
+
+class ErrorResponse(BaseModel):
+    success: bool = False
+    error: str
+    details: Optional[Dict[str, Any]] = None

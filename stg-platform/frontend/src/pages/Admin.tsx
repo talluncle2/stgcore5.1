@@ -1,324 +1,312 @@
-import { useCallback, useMemo, useState } from "react";
-import { Crosshair, Edit, Plus, Save, ShieldAlert, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Copy, RefreshCw, Search, ShieldCheck, Users } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
-import { useAuth } from "../context/AuthContext";
-import { usePolling } from "../hooks/usePolling";
-import { hasAdminAccess } from "../utils/permissions";
-import { getAdminSettings, updateAdminSettings } from "../services/adminService";
-import { createMember, deleteMember, getMembers, updateMember } from "../services/membersService";
-import { createProduct, deleteProduct, getAdminProducts, updateProduct } from "../services/storeService";
-import { createTournament, deleteTournament, getAdminTournaments, updateTournament } from "../services/tournamentsService";
-import { AdminMember, AdminSettings, Product, Tournament } from "../types/api";
+import {
+  getDiscordEvents,
+  getDiscordMembers,
+  getDiscordRoles,
+} from "../services/adminService";
 
-type Tab = "members" | "tournaments" | "store" | "settings";
-type Notice = { type: "success" | "error"; message: string } | null;
+type DiscordMember = {
+  discord_id: string | number;
+  username?: string;
+  discord_username?: string;
+  global_name?: string;
+  display_name?: string;
+  nick?: string;
+  avatar_url?: string;
+  status?: string;
+  role_ids?: Array<string | number>;
+  roles_json?: Array<{ id?: string | number; name?: string }> | Record<string, unknown>;
+  is_admin?: boolean;
+  is_moderator?: boolean;
+  can_access_dashboard?: boolean;
+  is_bot?: boolean;
+};
 
-const inputClass =
-  "w-full rounded-lg border-2 border-[#2d3748] bg-[#0f172a] px-3 py-2 text-sm text-white placeholder-[#64748b] focus:border-[#a855f7] focus:outline-none";
+type DiscordRole = {
+  role_id: string | number;
+  name: string;
+  color?: string;
+  position?: number;
+  mentionable?: boolean;
+};
 
-function idOf(item: AdminMember | Product | Tournament): string | number {
-  if ("discord_id" in item) return item.discord_id;
-  if ("product_id" in item) return item.product_id;
-  return item.tournament_id || item.id || "";
+type DiscordEvent = {
+  id?: string | number;
+  event_type?: string;
+  discord_id?: string | number;
+  channel_id?: string | number;
+  created_at?: string;
+};
+
+function roleBadge(member: DiscordMember) {
+  if (member.is_admin) return "ADMIN";
+  if (member.is_moderator) return "MODERADOR";
+  if (member.can_access_dashboard) return "STAFF";
+  return member.is_bot ? "BOT" : "MEMBRO";
 }
 
-function AdminBlocked() {
-  return (
-    <div className="cod-mission-panel failed">
-      <div className="mb-3 flex items-center gap-2 text-[#ef4444]">
-        <ShieldAlert size={20} />
-        <span className="font-black uppercase">Voce nao possui permissao administrativa</span>
-      </div>
-      <p className="text-sm text-[#94a3b8]">Apenas administradores podem executar esta acao.</p>
-    </div>
-  );
+function roleNames(member: DiscordMember) {
+  if (Array.isArray(member.roles_json)) {
+    return member.roles_json.map((role) => role.name).filter(Boolean).join(", ");
+  }
+  return member.role_ids?.join(", ") || "Sem cargos sincronizados";
 }
 
-function buildTournamentPayload(form: { id: string; code: string; name: string; description: string; status: string }) {
-  return {
-    id: form.id,
-    code: form.code || form.name,
-    description: form.description,
-    status: form.status as Tournament["status"],
-  };
-}
-
-function buildProductPayload(form: { id: string; name: string; description: string; price: string; stock: string; category: string }) {
-  return {
-    id: form.id,
-    name: form.name,
-    description: form.description,
-    price: Number(form.price || 0),
-    price_coins: Number(form.price || 0),
-    stock: Number(form.stock || 0),
-    category: form.category,
-  };
+function formatDate(value?: string) {
+  if (!value) return "N/A";
+  return new Date(value).toLocaleString("pt-BR");
 }
 
 export function Admin() {
-  const { user } = useAuth();
-  const isAdmin = hasAdminAccess(user);
-  const [tab, setTab] = useState<Tab>("members");
-  const [members, setMembers] = useState<AdminMember[]>([]);
-  const [tournaments, setTournaments] = useState<Tournament[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [settings, setSettings] = useState<AdminSettings | null>(null);
-  const [notice, setNotice] = useState<Notice>(null);
-  const [loading, setLoading] = useState(false);
-  const [memberForm, setMemberForm] = useState({ discord_id: "", username: "", role: "", status: "", notes: "" });
-  const [tournamentForm, setTournamentForm] = useState({ id: "", code: "", name: "", description: "", status: "pendente" });
-  const [productForm, setProductForm] = useState({ id: "", name: "", description: "", price: "", stock: "", category: "" });
-  const [settingsText, setSettingsText] = useState("{}");
+  const [members, setMembers] = useState<DiscordMember[]>([]);
+  const [roles, setRoles] = useState<DiscordRole[]>([]);
+  const [events, setEvents] = useState<DiscordEvent[]>([]);
+  const [query, setQuery] = useState("");
+  const [filter, setFilter] = useState("todos");
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    const [memberData, tournamentData, productData, settingsData] = await Promise.all([
-      getMembers(),
-      getAdminTournaments(),
-      getAdminProducts(),
-      getAdminSettings(),
-    ]);
-    setMembers(memberData);
-    setTournaments(tournamentData);
-    setProducts(productData);
-    setSettings(settingsData);
-    setSettingsText(JSON.stringify(settingsData ?? {}, null, 2));
-  }, []);
-
-  usePolling(loadData, 20000, isAdmin);
-
-  const activeCount = useMemo(
-    () => ({
-      members: members.length,
-      tournaments: tournaments.length,
-      store: products.length,
-      settings: settings ? 1 : 0,
-    }),
-    [members.length, products.length, settings, tournaments.length]
-  );
-
-  async function runAdminAction(action: () => Promise<void>) {
-    if (!isAdmin) {
-      setNotice({ type: "error", message: "Apenas administradores podem executar esta acao." });
-      return;
-    }
-
-    setLoading(true);
-    setNotice(null);
     try {
-      await action();
-      await loadData();
-      setNotice({ type: "success", message: "Dados atualizados com sucesso." });
-    } catch (error) {
-      setNotice({
-        type: "error",
-        message: error instanceof Error ? error.message : "Erro ao salvar alteracoes.",
-      });
+      setError(null);
+      const [memberData, roleData, eventData] = await Promise.all([
+        getDiscordMembers({ limit: 200 }),
+        getDiscordRoles({ limit: 200 }),
+        getDiscordEvents({ limit: 20 }),
+      ]);
+
+      setMembers(memberData ?? []);
+      setRoles(roleData ?? []);
+      setEvents(eventData?.events ?? []);
+    } catch (err) {
+      console.error("Failed to load admin data:", err);
+      setError("Rota administrativa ainda nao disponivel na API.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
-  }
+  }, []);
 
-  function editMember(member: AdminMember) {
-    setMemberForm({
-      discord_id: String(member.discord_id ?? ""),
-      username: member.username || member.discord_username || member.display_name || "",
-      role: member.role || "",
-      status: member.status || "",
-      notes: member.notes || "",
-    });
-  }
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
-  function editTournament(tournament: Tournament) {
-    setTournamentForm({
-      id: String(idOf(tournament)),
-      code: tournament.code || "",
-      name: tournament.code || String(tournament.tournament_id),
-      description: tournament.description || tournament.ranking || "",
-      status: tournament.status || "pendente",
-    });
-  }
+  const filteredMembers = useMemo(() => {
+    const normalizedQuery = query.trim().toLowerCase();
+    return members.filter((member) => {
+      const permissionMatch =
+        filter === "todos" ||
+        (filter === "admin" && member.is_admin) ||
+        (filter === "moderador" && member.is_moderator) ||
+        (filter === "staff" && member.can_access_dashboard) ||
+        (filter === "bot" && member.is_bot) ||
+        (filter === "membro" && !member.is_admin && !member.is_moderator && !member.can_access_dashboard && !member.is_bot);
 
-  function editProduct(product: Product) {
-    setProductForm({
-      id: String(idOf(product)),
-      name: product.name || "",
-      description: product.description || "",
-      price: String(product.price ?? product.price_coins ?? ""),
-      stock: String(product.stock ?? ""),
-      category: product.category || "",
+      if (!permissionMatch) return false;
+      if (!normalizedQuery) return true;
+
+      return [
+        member.discord_id,
+        member.display_name,
+        member.username,
+        member.discord_username,
+        member.global_name,
+        member.nick,
+      ]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(normalizedQuery));
     });
-  }
+  }, [filter, members, query]);
 
   return (
     <Layout>
       <div className="space-y-6">
-        <div className="cod-military-bg rounded-lg border-2 border-[#a855f7]/50 p-6">
-          <div className="mb-2 flex items-center gap-3">
-            <Crosshair className="text-[#a855f7]" size={28} />
-            <h1 className="cod-header-highlight">PAINEL ADMINISTRATIVO</h1>
+        <div className="flex flex-col gap-3 border border-[#a855f7]/20 bg-[#050608]/70 p-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="tactical-label">Administracao Discord</p>
+            <h2 className="text-xl font-black uppercase tracking-[0.06em] text-white">
+              Membros, cargos e eventos reais
+            </h2>
+            <p className="mt-1 text-sm text-[#94a3b8]">
+              Dados lidos das rotas seguras `/admin/discord/*`, sem chave do bot no frontend.
+            </p>
           </div>
-          <p className="ml-11 text-sm text-[#94a3b8]">
-            Controle sincronizado com a API do Replit. O bot continua isolado no backend.
-          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setRefreshing(true);
+              void loadData();
+            }}
+            className="tactical-edge inline-flex items-center justify-center gap-2 border border-[#a855f7]/40 bg-[#a855f7]/15 px-4 py-2 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#a855f7]/25"
+          >
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            Atualizar dados
+          </button>
         </div>
 
-        {!isAdmin && <AdminBlocked />}
-
-        {notice && (
-          <div className={`rounded-lg border p-3 text-sm font-bold ${notice.type === "success" ? "border-[#22c55e]/30 bg-[#22c55e]/10 text-[#22c55e]" : "border-[#ef4444]/30 bg-[#ef4444]/10 text-[#ef4444]"}`}>
-            {notice.message}
+        {error && (
+          <div className="border border-[#f97316]/35 bg-[#f97316]/10 p-4 text-sm font-bold text-[#fed7aa]">
+            {error}
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           {[
-            ["members", `Membros (${activeCount.members})`],
-            ["tournaments", `Campeonatos (${activeCount.tournaments})`],
-            ["store", `Loja (${activeCount.store})`],
-            ["settings", "Administracao"],
-          ].map(([value, label]) => (
-            <button
-              key={value}
-              onClick={() => setTab(value as Tab)}
-              className={`rounded-lg px-4 py-2 text-xs font-black uppercase ${tab === value ? "stg-button-primary" : "border border-[#a855f7]/25 bg-[#111827]/85 text-[#94a3b8] hover:border-[#a855f7]"}`}
-            >
-              {label}
-            </button>
+            ["Membros", members.length, Users],
+            ["Cargos", roles.length, ShieldCheck],
+            ["Eventos", events.length, RefreshCw],
+          ].map(([label, value, Icon]) => (
+            <div key={String(label)} className="stg-hud-panel p-4">
+              <div className="mb-3 flex items-center gap-2 text-[#a855f7]">
+                <Icon size={18} />
+                <p className="tactical-label">{label}</p>
+              </div>
+              <p className="text-3xl font-black text-white">{String(value)}</p>
+            </div>
           ))}
         </div>
 
-        {tab === "members" && (
-          <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
-            <div className="cod-mission-panel active">
-              <h2 className="mb-4 font-black uppercase text-white">Gestao de Membros</h2>
-              <div className="space-y-3">
-                <input className={inputClass} placeholder="Discord ID" value={memberForm.discord_id} onChange={(e) => setMemberForm({ ...memberForm, discord_id: e.target.value })} />
-                <input className={inputClass} placeholder="Nome/apelido" value={memberForm.username} onChange={(e) => setMemberForm({ ...memberForm, username: e.target.value })} />
-                <input className={inputClass} placeholder="Cargo" value={memberForm.role} onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })} />
-                <input className={inputClass} placeholder="Status" value={memberForm.status} onChange={(e) => setMemberForm({ ...memberForm, status: e.target.value })} />
-                <textarea className={inputClass} placeholder="Observacoes administrativas" value={memberForm.notes} onChange={(e) => setMemberForm({ ...memberForm, notes: e.target.value })} />
-                <div className="grid grid-cols-2 gap-2">
-                  <button disabled={!isAdmin || loading} onClick={() => runAdminAction(() => createMember(memberForm, user).then(() => undefined))} className="stg-button-primary flex items-center justify-center gap-2 disabled:opacity-50">
-                    <Plus size={16} /> Criar
-                  </button>
-                  <button disabled={!isAdmin || loading || !memberForm.discord_id} onClick={() => runAdminAction(() => updateMember(memberForm.discord_id, memberForm, user).then(() => undefined))} className="stg-button-secondary flex items-center justify-center gap-2 disabled:opacity-50">
-                    <Save size={16} /> Salvar
-                  </button>
-                </div>
-              </div>
+        <section className="stg-hud-panel-glow p-5">
+          <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div className="relative min-w-0 flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#64748b]" size={18} />
+              <input
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Buscar por nome ou Discord ID"
+                className="w-full border border-[#a855f7]/20 bg-[#111827] py-3 pl-10 pr-4 text-sm font-bold text-white outline-none placeholder:text-[#64748b] focus:border-[#a855f7]/55"
+              />
             </div>
+            <select
+              value={filter}
+              onChange={(event) => setFilter(event.target.value)}
+              className="border border-[#a855f7]/20 bg-[#111827] px-4 py-3 text-sm font-black uppercase text-white outline-none focus:border-[#a855f7]/55"
+            >
+              <option value="todos">Todos</option>
+              <option value="admin">Admin</option>
+              <option value="moderador">Moderador</option>
+              <option value="staff">Staff</option>
+              <option value="membro">Membro</option>
+              <option value="bot">Bot</option>
+            </select>
+          </div>
 
-            <div className="space-y-2">
-              {members.length === 0 ? (
-                <div className="cod-mission-panel text-sm text-[#94a3b8]">Dados indisponiveis no momento.</div>
+          {loading ? (
+            <div className="p-8 text-center text-[#94a3b8]">Carregando membros sincronizados...</div>
+          ) : filteredMembers.length === 0 ? (
+            <div className="p-8 text-center text-[#94a3b8]">
+              Nenhum membro encontrado. Aguarde a sincronizacao do bot ou ajuste os filtros.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[820px] text-left text-sm">
+                <thead className="border-b border-[#a855f7]/20 text-xs uppercase tracking-[0.08em] text-[#94a3b8]">
+                  <tr>
+                    <th className="py-3 pr-4">Membro</th>
+                    <th className="py-3 pr-4">Discord ID</th>
+                    <th className="py-3 pr-4">Permissao</th>
+                    <th className="py-3 pr-4">Status</th>
+                    <th className="py-3 pr-4">Cargos</th>
+                    <th className="py-3 pr-4">Acao</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredMembers.map((member) => {
+                    const displayName =
+                      member.display_name ||
+                      member.global_name ||
+                      member.username ||
+                      member.discord_username ||
+                      "Membro";
+                    return (
+                      <tr key={String(member.discord_id)} className="border-b border-[#a855f7]/10">
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={
+                                member.avatar_url ||
+                                `https://ui-avatars.com/api/?name=${encodeURIComponent(displayName)}&background=a855f7&color=fff`
+                              }
+                              alt={displayName}
+                              className="size-10 rounded-full border border-[#a855f7]/40 object-cover"
+                            />
+                            <div>
+                              <p className="font-black text-white">{displayName}</p>
+                              <p className="text-xs text-[#94a3b8]">{member.discord_username || member.username || "Discord"}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3 pr-4 font-mono text-[#c4b5fd]">{member.discord_id}</td>
+                        <td className="py-3 pr-4">
+                          <span className="border border-[#a855f7]/30 bg-[#a855f7]/15 px-2 py-1 text-xs font-black text-white">
+                            {roleBadge(member)}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4 text-[#94a3b8]">{member.status || "N/A"}</td>
+                        <td className="max-w-[280px] truncate py-3 pr-4 text-[#94a3b8]" title={roleNames(member)}>
+                          {roleNames(member)}
+                        </td>
+                        <td className="py-3 pr-4">
+                          <button
+                            type="button"
+                            onClick={() => navigator.clipboard.writeText(String(member.discord_id))}
+                            className="tactical-edge inline-flex items-center gap-2 border border-[#a855f7]/25 bg-[#111827]/80 px-3 py-2 text-xs font-black uppercase text-[#c4b5fd] hover:border-[#a855f7]/55"
+                          >
+                            <Copy size={14} />
+                            Copiar ID
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+          <section className="stg-hud-panel-glow p-5">
+            <h3 className="mb-4 text-lg font-black uppercase tracking-[0.06em] text-white">Cargos reais</h3>
+            <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+              {roles.length === 0 ? (
+                <p className="text-sm text-[#94a3b8]">Nenhum cargo sincronizado ainda.</p>
               ) : (
-                members.map((member) => (
-                  <div key={String(idOf(member))} className="cod-mission-panel flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                roles.map((role) => (
+                  <div key={String(role.role_id)} className="flex items-center justify-between border border-[#a855f7]/10 bg-[#111827]/55 p-3">
                     <div>
-                      <p className="font-black text-white">{member.display_name || member.username || member.discord_username || "Membro"}</p>
-                      <p className="text-xs text-[#94a3b8]">{member.discord_id} - {member.role || "sem cargo"}</p>
+                      <p className="font-black text-white">{role.name}</p>
+                      <p className="text-xs text-[#94a3b8]">{role.role_id}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => editMember(member)} className="rounded bg-[#a855f7]/20 px-3 py-2 text-[#a855f7]"><Edit size={16} /></button>
-                      <button disabled={!isAdmin || loading} onClick={() => runAdminAction(() => deleteMember(idOf(member), user))} className="rounded bg-[#ef4444]/20 px-3 py-2 text-[#ef4444] disabled:opacity-50"><Trash2 size={16} /></button>
-                    </div>
+                    <span className="text-xs font-bold text-[#94a3b8]">#{role.position ?? 0}</span>
                   </div>
                 ))
               )}
             </div>
           </section>
-        )}
 
-        {tab === "tournaments" && (
-          <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
-            <div className="cod-mission-panel active">
-              <h2 className="mb-4 font-black uppercase text-white">Gestao de Campeonatos</h2>
-              <div className="space-y-3">
-                <input className={inputClass} placeholder="ID para editar" value={tournamentForm.id} onChange={(e) => setTournamentForm({ ...tournamentForm, id: e.target.value })} />
-                <input className={inputClass} placeholder="Codigo/nome" value={tournamentForm.code} onChange={(e) => setTournamentForm({ ...tournamentForm, code: e.target.value })} />
-                <textarea className={inputClass} placeholder="Descricao/regras/formato" value={tournamentForm.description} onChange={(e) => setTournamentForm({ ...tournamentForm, description: e.target.value })} />
-                <select className={inputClass} value={tournamentForm.status} onChange={(e) => setTournamentForm({ ...tournamentForm, status: e.target.value })}>
-                  <option value="pendente">Pendente</option>
-                  <option value="aprovado">Aprovado</option>
-                  <option value="rejeitado">Rejeitado</option>
-                </select>
-                <div className="grid grid-cols-2 gap-2">
-                  <button disabled={!isAdmin || loading} onClick={() => runAdminAction(() => createTournament(buildTournamentPayload(tournamentForm), user).then(() => undefined))} className="stg-button-primary flex items-center justify-center gap-2 disabled:opacity-50"><Plus size={16} /> Criar</button>
-                  <button disabled={!isAdmin || loading || !tournamentForm.id} onClick={() => runAdminAction(() => updateTournament(tournamentForm.id, buildTournamentPayload(tournamentForm), user).then(() => undefined))} className="stg-button-secondary flex items-center justify-center gap-2 disabled:opacity-50"><Save size={16} /> Salvar</button>
-                </div>
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {tournaments.map((tournament) => (
-                <div key={String(idOf(tournament))} className="cod-mission-panel">
-                  <p className="font-black text-white">{tournament.code || `Campeonato ${idOf(tournament)}`}</p>
-                  <p className="mb-3 text-xs text-[#94a3b8]">{tournament.status}</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => editTournament(tournament)} className="rounded bg-[#a855f7]/20 px-3 py-2 text-[#a855f7]"><Edit size={16} /></button>
-                    <button disabled={!isAdmin || loading} onClick={() => runAdminAction(() => deleteTournament(idOf(tournament), user))} className="rounded bg-[#ef4444]/20 px-3 py-2 text-[#ef4444] disabled:opacity-50"><Trash2 size={16} /></button>
+          <section className="stg-hud-panel-glow p-5">
+            <h3 className="mb-4 text-lg font-black uppercase tracking-[0.06em] text-white">Ultimos eventos</h3>
+            <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
+              {events.length === 0 ? (
+                <p className="text-sm text-[#94a3b8]">Nenhum evento sincronizado ainda.</p>
+              ) : (
+                events.map((event) => (
+                  <div key={String(event.id ?? `${event.event_type}-${event.created_at}`)} className="border border-[#a855f7]/10 bg-[#111827]/55 p-3">
+                    <p className="font-black uppercase text-white">{event.event_type || "evento"}</p>
+                    <p className="text-xs text-[#94a3b8]">
+                      {event.discord_id ? `Discord ${event.discord_id} - ` : ""}
+                      {formatDate(event.created_at)}
+                    </p>
                   </div>
-                </div>
-              ))}
-              {tournaments.length === 0 && <div className="cod-mission-panel text-sm text-[#94a3b8]">Dados indisponiveis no momento.</div>}
+                ))
+              )}
             </div>
           </section>
-        )}
-
-        {tab === "store" && (
-          <section className="grid gap-4 lg:grid-cols-[360px_1fr]">
-            <div className="cod-mission-panel active">
-              <h2 className="mb-4 font-black uppercase text-white">Gestao de Loja</h2>
-              <div className="space-y-3">
-                <input className={inputClass} placeholder="ID para editar" value={productForm.id} onChange={(e) => setProductForm({ ...productForm, id: e.target.value })} />
-                <input className={inputClass} placeholder="Nome" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} />
-                <textarea className={inputClass} placeholder="Descricao" value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} />
-                <input className={inputClass} placeholder="Preco" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} />
-                <input className={inputClass} placeholder="Estoque" value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} />
-                <input className={inputClass} placeholder="Categoria" value={productForm.category} onChange={(e) => setProductForm({ ...productForm, category: e.target.value })} />
-                <div className="grid grid-cols-2 gap-2">
-                  <button disabled={!isAdmin || loading} onClick={() => runAdminAction(() => createProduct(buildProductPayload(productForm), user).then(() => undefined))} className="stg-button-primary flex items-center justify-center gap-2 disabled:opacity-50"><Plus size={16} /> Criar</button>
-                  <button disabled={!isAdmin || loading || !productForm.id} onClick={() => runAdminAction(() => updateProduct(productForm.id, buildProductPayload(productForm), user).then(() => undefined))} className="stg-button-secondary flex items-center justify-center gap-2 disabled:opacity-50"><Save size={16} /> Salvar</button>
-                </div>
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              {products.map((product) => (
-                <div key={String(idOf(product))} className="cod-mission-panel">
-                  <p className="font-black text-white">{product.name}</p>
-                  <p className="mb-3 text-xs text-[#94a3b8]">{product.category || "geral"} - {product.price} coins</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => editProduct(product)} className="rounded bg-[#a855f7]/20 px-3 py-2 text-[#a855f7]"><Edit size={16} /></button>
-                    <button disabled={!isAdmin || loading} onClick={() => runAdminAction(() => deleteProduct(idOf(product), user))} className="rounded bg-[#ef4444]/20 px-3 py-2 text-[#ef4444] disabled:opacity-50"><Trash2 size={16} /></button>
-                  </div>
-                </div>
-              ))}
-              {products.length === 0 && <div className="cod-mission-panel text-sm text-[#94a3b8]">Dados indisponiveis no momento.</div>}
-            </div>
-          </section>
-        )}
-
-        {tab === "settings" && (
-          <section className="cod-mission-panel active">
-            <h2 className="mb-4 font-black uppercase text-white">Configuracoes Administrativas</h2>
-            <p className="mb-3 text-sm text-[#94a3b8]">
-              Edite JSON conforme contrato da API existente: cargos admin/moderadores, permissoes do painel, canais,
-              logs e comandos habilitados.
-            </p>
-            <textarea className={`${inputClass} min-h-72 font-mono`} value={settingsText} onChange={(e) => setSettingsText(e.target.value)} />
-            <button
-              disabled={!isAdmin || loading}
-              onClick={() =>
-                runAdminAction(async () => {
-                  const parsed = JSON.parse(settingsText) as AdminSettings;
-                  await updateAdminSettings(parsed, user);
-                })
-              }
-              className="stg-button-primary mt-4 flex items-center gap-2 disabled:opacity-50"
-            >
-              <Save size={16} /> Salvar configuracoes
-            </button>
-          </section>
-        )}
+        </div>
       </div>
     </Layout>
   );

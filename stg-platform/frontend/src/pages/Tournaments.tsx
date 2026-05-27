@@ -109,8 +109,8 @@ export function Tournaments() {
                   </div>
 
                   <div className="mt-6 border-t border-[#a855f7]/20 pt-4">
-                    <button className="stg-button-primary w-full text-sm">
-                      Ver Detalhes
+                    <button disabled title="Modulo de campeonatos aguardando backend" className="w-full cursor-not-allowed border border-[#2d3748] bg-[#111827] px-4 py-2 text-sm font-black uppercase text-[#64748b]">
+                      Modulo aguardando backend
                     </button>
                   </div>
                 </div>
@@ -120,8 +120,8 @@ export function Tournaments() {
         ) : (
           <div className="stg-hud-panel p-12 text-center">
             <Trophy className="mx-auto mb-3 text-[#94a3b8]" size={48} />
-            <p className="text-[#94a3b8]">Nenhuma operação encontrada no momento</p>
-            <p className="text-xs text-[#64748b] mt-2">Volte em breve para novas competições</p>
+            <p className="text-[#94a3b8]">Modulo de campeonatos aguardando backend</p>
+            <p className="text-xs text-[#64748b] mt-2">As rotas publicas ainda nao retornaram campeonatos.</p>
           </div>
         )}
       </div>

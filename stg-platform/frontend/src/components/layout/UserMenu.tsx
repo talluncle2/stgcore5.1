@@ -3,13 +3,14 @@ import { useNavigate } from "react-router-dom";
 import {
   Gauge,
   LogOut,
+  Settings,
   ShieldCheck,
   ShoppingCart,
   Trophy,
   User as UserIcon,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { hasAdminAccess, hasDashboardAccess, hasModeratorAccess } from "../../utils/permissions";
+import { hasAdminAccess, hasDashboardAccess, hasModeratorAccess, hasSettingsAccess } from "../../utils/permissions";
 
 export function UserMenu() {
   const { user, profile, signOut } = useAuth();
@@ -43,6 +44,7 @@ export function UserMenu() {
   const canOpenDashboard = hasDashboardAccess(identity);
   const canOpenAdmin = hasAdminAccess(identity);
   const canOpenModeration = hasModeratorAccess(identity);
+  const canOpenSettings = hasSettingsAccess(identity);
 
   const username =
     profile?.username ||
@@ -62,7 +64,13 @@ export function UserMenu() {
     user?.image_url ||
     `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=a855f7&color=fff`;
 
-  const roleLabel = canOpenAdmin ? "Admin" : canOpenModeration ? "Moderador" : "Membro";
+  const roleLabel = canOpenAdmin
+    ? "ADMIN"
+    : canOpenModeration
+      ? "MODERADOR"
+      : canOpenDashboard
+        ? "STAFF"
+        : "MEMBRO";
 
   return (
     <div className="relative" ref={menuRef}>
@@ -133,6 +141,16 @@ export function UserMenu() {
               >
                 <ShieldCheck size={16} />
                 Painel Moderador
+              </button>
+            )}
+
+            {canOpenSettings && (
+              <button
+                onClick={() => handleNavigate("/settings")}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-black uppercase tracking-[0.04em] text-[#c084fc] transition-colors hover:bg-[#a855f7]/12"
+              >
+                <Settings size={16} />
+                Configuracoes
               </button>
             )}
 

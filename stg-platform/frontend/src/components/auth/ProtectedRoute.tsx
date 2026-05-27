@@ -1,11 +1,12 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { hasAdminAccess, hasDashboardAccess, hasModeratorAccess } from "../../utils/permissions";
+import { hasAdminAccess, hasDashboardAccess, hasModeratorAccess, hasSettingsAccess } from "../../utils/permissions";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requireAuth?: boolean;
   requireDashboardAccess?: boolean;
+  requireAdmin?: boolean;
   requiredRole?: "admin" | "moderator";
 }
 
@@ -13,6 +14,7 @@ export function ProtectedRoute({
   children,
   requireAuth = true,
   requireDashboardAccess = false,
+  requireAdmin = false,
   requiredRole,
 }: ProtectedRouteProps) {
   const { user, profile, isAuthenticated, loading } = useAuth();
@@ -32,12 +34,16 @@ export function ProtectedRoute({
     );
   }
 
-  if (requireDashboardAccess && !isAuthenticated) {
+  if ((requireDashboardAccess || requireAdmin) && !isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
   if (authIsRequired && !isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  if (requireAdmin && !hasAdminAccess(user ?? profile)) {
+    return <Navigate to="/" replace />;
   }
 
   if ((requireDashboardAccess || requiredRole) && !hasDashboardAccess(user ?? profile)) {

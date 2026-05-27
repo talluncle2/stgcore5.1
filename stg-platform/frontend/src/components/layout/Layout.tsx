@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import { useLocation } from "react-router-dom";
-import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 
 interface LayoutProps {
@@ -78,9 +77,8 @@ export function Layout({ children }: LayoutProps) {
     <div className="stg-premium-shell tactical-shell min-h-screen" data-page={pageKey}>
       <div className="scanline-overlay" />
       <div className="stg-premium-bg" aria-hidden="true" />
-      <Sidebar />
       <Topbar />
-      <main className="stg-premium-main relative z-10 mt-16 p-4 text-left lg:ml-64 lg:p-6">
+      <main className="stg-premium-main relative z-10 mt-16 p-4 text-left lg:p-6">
         <div className="stg-premium-content">
           <section className="stg-page-banner mb-7">
             <div>

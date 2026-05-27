@@ -88,3 +88,18 @@ export function hasModeratorAccess(user: PermissionUser): boolean {
     ["moderator", "moderador", "staff_moderacao", "mod"].includes(value)
   );
 }
+
+/**
+ * Check if user has access to Settings page
+ * Only admins (is_admin === true) should access settings
+ */
+export function hasSettingsAccess(user: PermissionUser): boolean {
+  if (!user) return false;
+
+  const source = user as Record<string, unknown>;
+  if (source.is_admin === true) return true;
+
+  return collectValues(user).some((value) =>
+    ["admin", "administrator"].includes(value)
+  );
+}

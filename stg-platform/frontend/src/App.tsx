@@ -57,7 +57,7 @@ function App() {
           <Route
             path="/settings"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAdmin>
                 <Settings />
               </ProtectedRoute>
             }
@@ -75,7 +75,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute requireDashboardAccess requiredRole="admin">
+              <ProtectedRoute requireDashboardAccess>
                 <Admin />
               </ProtectedRoute>
             }
@@ -83,7 +83,7 @@ function App() {
           <Route
             path="/moderation"
             element={
-              <ProtectedRoute requireDashboardAccess requiredRole="moderator">
+              <ProtectedRoute requireDashboardAccess>
                 <Moderation />
               </ProtectedRoute>
             }
