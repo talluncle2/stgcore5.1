@@ -76,7 +76,7 @@ export function UserMenu() {
     <div className="relative" ref={menuRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="tactical-edge group flex items-center gap-2 border border-[#a855f7]/30 bg-[#111827]/85 px-2 py-1.5 transition-colors hover:border-[#84cc16]/55 hover:bg-[#111827]"
+        className="tactical-edge group flex max-w-[220px] items-center gap-2 border border-[#a855f7]/30 bg-[#111827]/85 px-2 py-1.5 transition-colors hover:border-[#84cc16]/55 hover:bg-[#111827] 2xl:max-w-[260px]"
         title={username}
       >
         <img
@@ -84,11 +84,11 @@ export function UserMenu() {
           alt={username}
           className="size-8 rounded-full border-2 border-[#a855f7] object-cover transition-colors group-hover:border-[#84cc16] shadow-lg shadow-[#a855f7]/20 glow-purple"
         />
-        <div className="hidden md:block">
-          <p className="text-left text-sm font-black uppercase tracking-[0.05em] text-[#f8fafc]">
+        <div className="hidden min-w-0 md:block">
+          <p className="max-w-[125px] truncate text-left text-sm font-black uppercase tracking-[0.05em] text-[#f8fafc] 2xl:max-w-[165px]">
             {username}
           </p>
-          <p className="text-left text-xs font-bold uppercase tracking-[0.08em] text-[#94a3b8]">
+          <p className="truncate text-left text-xs font-bold uppercase tracking-[0.08em] text-[#94a3b8]">
             {roleLabel}
           </p>
         </div>

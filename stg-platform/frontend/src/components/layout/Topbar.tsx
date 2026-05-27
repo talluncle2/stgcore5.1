@@ -37,6 +37,7 @@ export function Topbar() {
   const [apiStatus, setApiStatus] = useState<"online" | "offline">("offline");
   const [apiLoading, setApiLoading] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const { user, profile, isAuthenticated, loginWithDiscord } = useAuth();
 
   const identity = user ?? profile;
@@ -70,34 +71,41 @@ export function Topbar() {
     return () => clearInterval(interval);
   }, []);
 
-  function renderLink(item: NavItem, compact = false) {
+  const mainCompactLinks = [...publicLinks.slice(0, 4), ...adminLinks.slice(0, 2)];
+  const moreLinks = [...publicLinks.slice(4), ...adminLinks.slice(2)];
+
+  function renderLink(item: NavItem, compact = false, iconOnly = false) {
     const Icon = item.icon;
 
     return (
       <NavLink
         key={item.path}
         to={item.path}
-        onClick={() => setMobileOpen(false)}
+        onClick={() => {
+          setMobileOpen(false);
+          setMoreOpen(false);
+        }}
         className={({ isActive }) =>
           [
-            "flex items-center gap-2 border border-transparent px-3 py-2 text-xs font-black uppercase tracking-[0.08em] transition-colors",
-            compact ? "w-full" : "h-10",
+            "flex min-w-0 items-center gap-2 whitespace-nowrap border border-transparent px-3 py-2 text-xs font-black uppercase tracking-[0.08em] transition-colors",
+            compact ? "w-full justify-start" : "h-10 justify-center",
             isActive
               ? "border-[#a855f7]/45 bg-[#a855f7]/15 text-white"
               : "text-[#94a3b8] hover:border-[#a855f7]/30 hover:bg-[#111827]/80 hover:text-white",
           ].join(" ")
         }
+        title={item.label}
       >
         <Icon size={15} />
-        <span>{item.label}</span>
+        {!iconOnly && <span className="truncate">{item.label}</span>}
       </NavLink>
     );
   }
 
   return (
     <header className="stg-premium-topbar fixed left-0 right-0 top-0 z-30 border-b border-[#a855f7]/20 bg-[#050608]/94 text-center shadow-lg shadow-black/25 backdrop-blur-xl">
-      <div className="flex h-16 items-center justify-between gap-3 px-3 lg:px-6">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="flex h-16 items-center gap-3 px-3 lg:px-5">
+        <div className="flex shrink-0 items-center gap-3">
           <button
             type="button"
             onClick={() => setMobileOpen((value) => !value)}
@@ -111,28 +119,50 @@ export function Topbar() {
             <div className="tactical-edge hidden size-9 items-center justify-center border border-[#a855f7]/35 bg-[#111827] text-[#a855f7] sm:flex">
               <Crosshair size={18} />
             </div>
-            <div className="min-w-0">
-              <p className="tactical-label hidden sm:block">SUPREMO TRIBUNAL GAMER</p>
-              <h1 className="text-left text-lg font-black uppercase tracking-[0.07em] gradient-text sm:text-xl">
+            <div className="min-w-0 max-w-[150px] sm:max-w-[210px] xl:max-w-[180px] 2xl:max-w-[240px]">
+              <p className="tactical-label hidden truncate sm:block">SUPREMO TRIBUNAL GAMER</p>
+              <h1 className="truncate text-left text-lg font-black uppercase tracking-[0.07em] gradient-text sm:text-xl">
                 STG WARZONE
               </h1>
             </div>
           </Link>
         </div>
 
-        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 2xl:flex">
           {publicLinks.map((item) => renderLink(item))}
           {adminLinks.length > 0 && <span className="mx-1 h-7 border-l border-[#a855f7]/20" />}
           {adminLinks.map((item) => renderLink(item))}
         </nav>
 
-        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex xl:hidden">
-          {publicLinks.slice(0, 4).map((item) => renderLink(item))}
-          {adminLinks.slice(0, 3).map((item) => renderLink(item))}
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 xl:flex 2xl:hidden">
+          {mainCompactLinks.map((item) => renderLink(item))}
+          {moreLinks.length > 0 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMoreOpen((value) => !value)}
+                className="flex h-10 items-center gap-2 whitespace-nowrap border border-transparent px-3 py-2 text-xs font-black uppercase tracking-[0.08em] text-[#94a3b8] transition-colors hover:border-[#a855f7]/30 hover:bg-[#111827]/80 hover:text-white"
+              >
+                <Menu size={15} />
+                Mais
+              </button>
+              {moreOpen && (
+                <div className="stg-hud-panel-glow absolute left-1/2 top-12 z-50 w-56 -translate-x-1/2 overflow-hidden border-[#a855f7]/30 p-2">
+                  <div className="grid gap-1">
+                    {moreLinks.map((item) => renderLink(item, true))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </nav>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <div className="tactical-edge hidden items-center gap-2 border border-[#84cc16]/25 bg-[#111827]/90 px-3 py-2 sm:flex">
+        <nav className="hidden min-w-0 flex-1 items-center justify-center gap-1 lg:flex xl:hidden">
+          {mainCompactLinks.slice(0, 6).map((item) => renderLink(item, false, true))}
+        </nav>
+
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <div className="tactical-edge hidden items-center gap-2 border border-[#84cc16]/25 bg-[#111827]/90 px-3 py-2 2xl:flex">
             <Circle
               size={8}
               className={`fill-current ${
@@ -150,7 +180,7 @@ export function Topbar() {
 
           <button
             type="button"
-            className="tactical-edge hidden border border-[#a855f7]/20 bg-[#111827]/80 p-2 text-[#94a3b8] transition-colors hover:border-[#a855f7]/45 hover:text-[#a855f7] sm:block"
+            className="tactical-edge hidden border border-[#a855f7]/20 bg-[#111827]/80 p-2 text-[#94a3b8] transition-colors hover:border-[#a855f7]/45 hover:text-[#a855f7] xl:block"
             title="Modulo aguardando backend"
           >
             <Bell size={20} />
