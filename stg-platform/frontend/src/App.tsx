@@ -16,7 +16,6 @@ import { SignUp } from './pages/SignUp';
 import { Profile } from './pages/Profile';
 import { AuthCallback } from './pages/AuthCallback';
 import { Community } from './pages/Community';
-import { InternalPreview } from './pages/InternalPreview';
 
 function App() {
   return (
@@ -35,7 +34,14 @@ function App() {
           <Route path="/signup" element={<SignUp />} />
           <Route path="/auth/callback" element={<AuthCallback />} />
           <Route path="/comunidade" element={<Community />} />
-          <Route path="/preview" element={<InternalPreview />} />
+          <Route
+            path="/preview"
+            element={
+              <ProtectedRoute requireAdmin>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Protected Routes - Require Login */}
           <Route

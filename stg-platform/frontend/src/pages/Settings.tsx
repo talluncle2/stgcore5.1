@@ -1,114 +1,252 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  Activity,
+  AlertCircle,
+  CheckCircle2,
+  Database,
+  RefreshCw,
+  Server,
+  Shield,
+  ShieldAlert,
+  XCircle,
+} from "lucide-react";
 import { Layout } from "../components/layout/Layout";
-import { getHealth, API_BASE_URL } from "../services/api";
-import { Shield, AlertCircle, RefreshCw } from "lucide-react";
+import {
+  API_BASE_URL,
+  buildApiUrl,
+  getHealth,
+  getOverview,
+  getProducts,
+  getRanking,
+  getTournaments,
+} from "../services/api";
+
+type DiagnosticStatus = "idle" | "loading" | "online" | "offline";
+
+interface DiagnosticResult {
+  label: string;
+  endpoint: string;
+  ok: boolean;
+  detail: string;
+}
+
+const checks = [
+  {
+    label: "Saude da API",
+    endpoint: "/health",
+    run: async () => {
+      const data = await getHealth();
+      return {
+        ok: data.status === "online",
+        detail: data.status === "online" ? "API respondeu online" : "Sem resposta online",
+      };
+    },
+  },
+  {
+    label: "Overview publico",
+    endpoint: "/public/overview",
+    run: async () => {
+      const data = await getOverview();
+      return {
+        ok: data.api === "online",
+        detail: `${data.users_total} usuarios, ${data.products_total} produtos, ${data.tournaments_total} torneios`,
+      };
+    },
+  },
+  {
+    label: "Ranking",
+    endpoint: "/public/ranking?limit=5",
+    run: async () => {
+      const data = await getRanking(5);
+      return { ok: true, detail: `${data.length} registros carregados` };
+    },
+  },
+  {
+    label: "Loja",
+    endpoint: "/public/products?limit=5",
+    run: async () => {
+      const data = await getProducts(undefined, 5);
+      return { ok: true, detail: `${data.length} produtos carregados` };
+    },
+  },
+  {
+    label: "Torneios",
+    endpoint: "/public/tournaments?limit=5",
+    run: async () => {
+      const data = await getTournaments(undefined, 5);
+      return { ok: true, detail: `${data.length} torneios carregados` };
+    },
+  },
+];
 
 export function Settings() {
   const [apiStatus, setApiStatus] = useState<"online" | "offline">("offline");
-  const [loading, setLoading] = useState(true);
-  const [testing, setTesting] = useState(false);
+  const [status, setStatus] = useState<DiagnosticStatus>("idle");
+  const [results, setResults] = useState<DiagnosticResult[]>([]);
+  const [lastRun, setLastRun] = useState<string | null>(null);
 
-  const checkHealth = async () => {
-    setTesting(true);
-    try {
-      const result = await getHealth();
-      setApiStatus(result.status);
-    } catch {
-      setApiStatus("offline");
-    } finally {
-      setTesting(false);
-    }
-  };
+  const connectionMode = useMemo(() => API_BASE_URL, []);
+
+  const runChecks = useCallback(async () => {
+    setStatus("loading");
+
+    const settled = await Promise.all(
+      checks.map(async (check): Promise<DiagnosticResult> => {
+        try {
+          const result = await check.run();
+          return {
+            label: check.label,
+            endpoint: check.endpoint,
+            ok: result.ok,
+            detail: result.detail,
+          };
+        } catch (error) {
+          return {
+            label: check.label,
+            endpoint: check.endpoint,
+            ok: false,
+            detail: error instanceof Error ? error.message : "Falha desconhecida",
+          };
+        }
+      })
+    );
+
+    const healthResult = settled.find((result) => result.endpoint === "/health");
+    setApiStatus(healthResult?.ok ? "online" : "offline");
+    setResults(settled);
+    setStatus(settled.some((result) => result.ok) ? "online" : "offline");
+    setLastRun(new Date().toLocaleString("pt-BR"));
+  }, []);
 
   useEffect(() => {
-    checkHealth();
-    setLoading(false);
-  }, []);
+    void runChecks();
+  }, [runChecks]);
+
+  const onlineCount = results.filter((result) => result.ok).length;
+  const totalCount = checks.length;
 
   return (
     <Layout>
-      <div className="space-y-6 max-w-3xl">
-        {/* Header */}
-        <div className="cod-military-bg p-6 rounded-lg border-2 border-[#a855f7]/50">
-          <div className="flex items-center gap-3 mb-2">
+      <div className="max-w-6xl space-y-6">
+        <div className="cod-military-bg rounded-lg border-2 border-[#a855f7]/50 p-6">
+          <div className="mb-2 flex items-center gap-3">
             <Shield className="text-[#a855f7]" size={28} />
             <h1 className="cod-header-highlight">CENTRO DE CONTROLE</h1>
           </div>
-          <p className="text-[#94a3b8] text-sm ml-11">Configurações e diagnóstico do sistema</p>
+          <p className="ml-11 text-sm text-[#94a3b8]">
+            Configuracoes, diagnostico e informacoes tecnicas protegidas por login admin.
+          </p>
         </div>
 
-        {/* API Connection */}
-        <div className="cod-mission-panel active">
-          <div className="cod-text-military text-sm text-[#22c55e] mb-4">🔌 CONEXÃO DA API</div>
-
-          <div className="space-y-4">
-            {/* URL */}
-            <div>
-              <label className="block text-[#94a3b8] text-xs font-black uppercase mb-2">
-                URL Base
-              </label>
-              <div className="cod-combat-stat cod-combat-stat-blue">
-                <code className="text-white text-xs font-mono">{API_BASE_URL}</code>
-              </div>
-              <p className="text-[#64748b] text-xs mt-2 font-mono">VITE_API_BASE_URL</p>
+        <section className="stg-hud-panel-glow flex flex-col gap-5 p-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="tactical-edge flex size-12 shrink-0 items-center justify-center border border-[#38bdf8]/50 bg-[#38bdf8]/10 text-[#38bdf8]">
+              <Server size={24} />
             </div>
-
-            {/* Status */}
             <div>
-              <label className="block text-[#94a3b8] text-xs font-black uppercase mb-2">
-                Status
-              </label>
-              <div className={`flex items-center gap-3 px-4 py-3 rounded-lg border-2 ${
-                apiStatus === "online"
-                  ? "bg-[#22c55e]/10 border-[#22c55e]/30 cod-pulse"
-                  : "bg-[#ef4444]/10 border-[#ef4444]/30"
-              }`}>
-                {apiStatus === "online" ? (
-                  <>
-                    <div className="w-2 h-2 rounded-full bg-[#22c55e] animate-pulse"></div>
-                    <span className="text-[#22c55e] font-black text-sm uppercase">OPERACIONAL</span>
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="text-[#ef4444]" size={18} />
-                    <span className="text-[#ef4444] font-black text-sm uppercase">DESCONECTADO</span>
-                  </>
-                )}
-              </div>
+              <p className="tactical-label mb-2">Diagnostico interno</p>
+              <h2 className="text-2xl font-black uppercase text-[#f8fafc] md:text-3xl">
+                Teste de conexao API
+              </h2>
+              <p className="mt-2 max-w-2xl text-sm text-[#94a3b8]">
+                Validacao rapida da API STG Core e endpoints publicos. Esta area nao expõe secrets e e restrita a admin.
+              </p>
             </div>
-
-            {/* Test Button */}
-            <button
-              onClick={checkHealth}
-              disabled={testing || loading}
-              className="w-full px-4 py-2.5 rounded-lg bg-gradient-to-r from-[#a855f7] to-[#7c3aed] text-white font-black disabled:opacity-50 flex items-center justify-center gap-2 transition-all text-sm uppercase hover:shadow-lg hover:shadow-[#a855f7]/50"
-            >
-              <RefreshCw size={16} className={testing ? "animate-spin" : ""} />
-              {testing ? "TESTANDO..." : "TESTAR"}
-            </button>
           </div>
-        </div>
 
-        {/* System Info */}
-        <div className="cod-mission-panel">
-          <div className="cod-text-military text-sm text-[#f97316] mb-4">📊 INFORMAÇÕES DO SISTEMA</div>
+          <button
+            type="button"
+            onClick={() => void runChecks()}
+            disabled={status === "loading"}
+            className="stg-button-primary inline-flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw size={16} className={status === "loading" ? "animate-spin" : ""} />
+            Revalidar
+          </button>
+        </section>
 
+        <section className="grid gap-4 md:grid-cols-3">
+          <div className="stg-hud-panel p-5">
+            <div className="mb-3 flex items-center gap-2 text-[#38bdf8]">
+              <Activity size={18} />
+              <span className="tactical-label text-[#38bdf8]">Status</span>
+            </div>
+            <p className={status === "offline" ? "text-3xl font-black text-[#ef4444]" : "text-3xl font-black text-[#84cc16]"}>
+              {status === "loading" ? "Validando" : status === "offline" ? "Offline" : "Online"}
+            </p>
+            <p className="mt-2 text-sm text-[#94a3b8]">
+              {onlineCount}/{totalCount} verificacoes respondendo
+            </p>
+          </div>
+
+          <div className="stg-hud-panel p-5">
+            <div className="mb-3 flex items-center gap-2 text-[#a855f7]">
+              <Database size={18} />
+              <span className="tactical-label text-[#a855f7]">Base URL</span>
+            </div>
+            <p className="break-all text-sm font-bold text-[#f8fafc]">{connectionMode}</p>
+            <p className="mt-2 text-xs text-[#94a3b8]">Configurada por VITE_API_BASE_URL no deploy.</p>
+          </div>
+
+          <div className="stg-hud-panel p-5">
+            <div className="mb-3 flex items-center gap-2 text-[#f97316]">
+              <ShieldAlert size={18} />
+              <span className="tactical-label text-[#f97316]">Execucao</span>
+            </div>
+            <p className="text-sm font-bold text-[#f8fafc]">{lastRun || "Aguardando primeira validacao"}</p>
+            <p className="mt-2 text-xs text-[#94a3b8]">Somente usuarios admin podem acessar esta tela.</p>
+          </div>
+        </section>
+
+        <section className="stg-hud-panel-glow overflow-hidden p-0">
+          <div className="border-b border-[#7c3aed]/25 p-5">
+            <h2 className="text-lg font-black uppercase text-[#f8fafc]">Endpoints em teste</h2>
+          </div>
+          <div className="divide-y divide-[#7c3aed]/20">
+            {(results.length > 0
+              ? results
+              : checks.map((check) => ({
+                  label: check.label,
+                  endpoint: check.endpoint,
+                  ok: false,
+                  detail: "Aguardando validacao",
+                }))
+            ).map((result) => (
+              <div key={result.endpoint} className="grid gap-3 p-5 md:grid-cols-[220px_1fr_220px] md:items-center">
+                <div className="flex items-center gap-3">
+                  {result.ok ? (
+                    <CheckCircle2 className="text-[#84cc16]" size={20} />
+                  ) : (
+                    <XCircle className="text-[#ef4444]" size={20} />
+                  )}
+                  <span className="font-black uppercase text-[#f8fafc]">{result.label}</span>
+                </div>
+                <code className="break-all rounded-md border border-[#1e293b] bg-[#0f172a] px-3 py-2 text-xs text-[#94a3b8]">
+                  {buildApiUrl(result.endpoint)}
+                </code>
+                <p className={result.ok ? "text-sm font-bold text-[#84cc16]" : "text-sm font-bold text-[#ef4444]"}>
+                  {result.detail}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="cod-mission-panel">
+          <div className="cod-text-military mb-4 text-sm text-[#f97316]">INFORMACOES DO SISTEMA</div>
           <div className="cod-stats-grid">
             <div className="cod-stat-box">
               <div className="cod-stat-box-label">APP</div>
-              <div className="text-xs text-white font-mono">STG</div>
+              <div className="font-mono text-xs text-white">STG</div>
             </div>
-
             <div className="cod-stat-box">
               <div className="cod-stat-box-label">VERSION</div>
-              <div className="text-xs text-white font-mono">1.0.0</div>
+              <div className="font-mono text-xs text-white">1.0.0</div>
             </div>
-
             <div className="cod-stat-box">
               <div className="cod-stat-box-label">FRAMEWORK</div>
-              <div className="text-xs text-white font-mono">REACT+VITE</div>
+              <div className="font-mono text-xs text-white">REACT+VITE</div>
             </div>
-
             <div className="cod-stat-box">
               <div className="cod-stat-box-label">STATUS</div>
               <div className={`text-xs font-black ${apiStatus === "online" ? "text-[#22c55e]" : "text-[#ef4444]"}`}>
@@ -116,67 +254,13 @@ export function Settings() {
               </div>
             </div>
           </div>
-
-          <div className="cod-crosshair my-4"></div>
-
-          <div className="text-xs text-[#94a3b8] space-y-2 font-mono">
-            <p>🏢 PROJETO: Supremo Tribunal Gamer</p>
-            <p>📅 DATA: {new Date().toLocaleDateString("pt-BR")}</p>
-            <p>⏰ HORA: {new Date().toLocaleTimeString("pt-BR")}</p>
+          <div className="mt-4 flex items-start gap-2 border border-[#f97316]/25 bg-[#f97316]/10 p-3 text-xs text-[#fed7aa]">
+            <AlertCircle className="mt-0.5 shrink-0" size={16} />
+            <p>
+              Secrets como BOT_API_KEY, JWT_SECRET_KEY, DATABASE_URL e tokens Discord nao sao exibidos nem editados pelo frontend.
+            </p>
           </div>
-        </div>
-
-        {/* Environment */}
-        <div className="cod-mission-panel">
-          <div className="cod-text-military text-sm text-[#38bdf8] mb-4">⚙️ VARIÁVEIS DE AMBIENTE</div>
-
-          <div className="bg-[#0f172a]/50 rounded-lg p-4 font-mono text-[10px] text-[#94a3b8] space-y-1 max-h-48 overflow-y-auto border border-[#2d3748]">
-            <div className="flex justify-between">
-              <span className="text-[#a855f7]">VITE_API_BASE_URL</span>
-              <span className="text-[#22c55e]">✓</span>
-            </div>
-            <div className="flex justify-between opacity-50">
-              <span>Additional vars</span>
-              <span>Configured</span>
-            </div>
-          </div>
-
-          <p className="text-[#64748b] text-xs mt-3 font-mono">Configuradas via .env (dev) ou deploy (prod)</p>
-        </div>
-
-        {/* Documentation */}
-        <div className="cod-mission-panel">
-          <div className="cod-text-military text-sm text-[#38bdf8] mb-4">📖 DOCUMENTAÇÃO</div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {[
-              { label: "GUIA DO USUÁRIO", icon: "📘" },
-              { label: "API DOCS", icon: "📡" },
-              { label: "FAQ", icon: "❓" },
-              { label: "SUPORTE", icon: "🆘" },
-            ].map((item) => (
-              <button
-                key={item.label}
-                className="px-3 py-2 rounded-lg border-2 border-[#2d3748] text-[#a855f7] font-black text-xs uppercase hover:border-[#a855f7] transition-colors"
-              >
-                {item.icon} {item.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Danger Zone */}
-        <div className="cod-mission-panel failed">
-          <div className="cod-text-military text-sm text-[#ef4444] mb-4">⚠️ ZONA RESTRITA</div>
-
-          <p className="text-[#ef4444] text-xs mb-4 font-mono">
-            AÇÕES AQUI PODEM TER CONSEQUÊNCIAS IRREVERSÍVEIS
-          </p>
-
-          <button className="w-full px-4 py-2 rounded-lg border-2 border-[#ef4444] text-[#ef4444] font-black hover:bg-[#ef4444]/10 transition-colors text-xs uppercase">
-            🗑️ LIMPAR CACHE LOCAL
-          </button>
-        </div>
+        </section>
       </div>
     </Layout>
   );
