@@ -67,6 +67,11 @@ function getChannelLabel(channel: CreatorChannel): string {
   }
 }
 
+function formatCompactNumber(value?: number): string {
+  if (value === undefined || value === null) return "N/A";
+  return Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
 export function Profile() {
   const { user, profile, refreshUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -87,6 +92,10 @@ export function Profile() {
   const username = profile?.username || user?.display_name || user?.username || user?.discord_username || "Operador";
   const avatarUrl = publicForm.public_avatar_url || profile?.avatar_url || user?.avatar_url || user?.discord_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=a855f7&color=fff`;
   const visibleCreatorProfile = user ? (creatorProfile || createLocalCreatorProfile(user)) : null;
+  const primaryCreatorChannel = visibleCreatorProfile?.channels.find((channel) => channel.is_active) || visibleCreatorProfile?.channels[0] || null;
+  const primaryChannelContent = primaryCreatorChannel
+    ? (visibleCreatorProfile?.latest_content || visibleCreatorProfile?.latest_contents || []).filter((content) => content.channel_id === primaryCreatorChannel.id).slice(0, 3)
+    : [];
 
   useEffect(() => {
     async function load() {
@@ -332,37 +341,37 @@ export function Profile() {
                 <div
                   className="min-h-44 bg-cover bg-center"
                   style={{
-                    backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.88), rgba(17,24,39,.72), rgba(88,28,135,.38)), url("${publicForm.public_banner_url || visibleCreatorProfile.public_banner_url || "/assets/tactical-ops-bg.png"}")`,
+                    backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.88), rgba(17,24,39,.72), rgba(88,28,135,.38)), url("${primaryChannelContent[0]?.thumbnail_url || "/assets/tactical-ops-bg.png"}")`,
                   }}
                 >
                   <div className="flex min-h-44 flex-col justify-end gap-5 p-5 md:flex-row md:items-end md:justify-between">
                     <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
                       <img
-                        src={publicForm.public_avatar_url || visibleCreatorProfile.public_avatar_url || visibleCreatorProfile.avatar_url || avatarUrl}
-                        alt={visibleCreatorProfile.public_name || visibleCreatorProfile.display_name || username}
+                        src={primaryCreatorChannel?.thumbnail_url || avatarUrl}
+                        alt={primaryCreatorChannel?.channel_name || getChannelLabel(primaryCreatorChannel || { platform: "youtube", id: "", creator_id: "", is_active: true })}
                         className="size-24 rounded-full border-4 border-[#050608] object-cover shadow-xl shadow-[#a855f7]/20"
                       />
                       <div className="min-w-0">
-                        <p className="tactical-label">Perfil de criador</p>
+                        <p className="tactical-label">Perfil publico sincronizado</p>
                         <h2 className="mt-1 break-words text-2xl font-black uppercase tracking-[0.08em] text-white">
-                          {visibleCreatorProfile.public_name || visibleCreatorProfile.display_name || publicForm.public_name || username}
+                          {primaryCreatorChannel?.channel_name || (primaryCreatorChannel ? getChannelLabel(primaryCreatorChannel) : "Nenhuma plataforma cadastrada")}
                         </h2>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <span className="stg-badge-danger">Criador STG</span>
+                          {primaryCreatorChannel && <CreatorPlatformBadge platform={primaryCreatorChannel.platform} />}
                           <span className="stg-badge-purple">{visibleCreatorProfile.channels.length} plataforma{visibleCreatorProfile.channels.length === 1 ? "" : "s"}</span>
-                          {visibleCreatorProfile.is_featured && <span className="stg-badge-success">Destaque</span>}
+                          {primaryCreatorChannel?.is_active && <span className="stg-badge-success">Sincronizado</span>}
                         </div>
                       </div>
                     </div>
 
                     <div className="grid gap-2 text-left md:min-w-64">
                       <div>
-                        <p className="tactical-label">Discord ID</p>
-                        <p className="break-all font-mono text-sm font-bold text-white">{visibleCreatorProfile.discord_id || user.discord_id || "N/A"}</p>
+                        <p className="tactical-label">Inscritos</p>
+                        <p className="break-all font-mono text-sm font-bold text-white">{formatCompactNumber(primaryCreatorChannel?.subscriber_count)}</p>
                       </div>
                       <div>
-                        <p className="tactical-label">Usuario</p>
-                        <p className="break-all text-sm font-bold text-white">{visibleCreatorProfile.username || user.discord_username || username}</p>
+                        <p className="tactical-label">Videos / views</p>
+                        <p className="break-all text-sm font-bold text-white">{formatCompactNumber(primaryCreatorChannel?.video_count)} / {formatCompactNumber(primaryCreatorChannel?.view_count)}</p>
                       </div>
                     </div>
                   </div>
@@ -372,18 +381,34 @@ export function Profile() {
                   <div className="space-y-4">
                     <div>
                       <p className="tactical-label">Bio publica</p>
-                      <p className="mt-2 text-sm leading-6 text-[#cbd5e1]">{visibleCreatorProfile.bio || publicForm.bio || "Sem bio publica cadastrada."}</p>
+                      <p className="mt-2 text-sm leading-6 text-[#cbd5e1]">{primaryCreatorChannel?.description || "A bio publica da plataforma ainda nao foi sincronizada."}</p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="border border-[#a855f7]/20 bg-black/25 p-3">
-                        <p className="tactical-label">Email publico</p>
-                        <p className="mt-1 break-all text-sm font-bold text-white">{publicForm.public_email || visibleCreatorProfile.public_email || "Nao informado"}</p>
+                        <p className="tactical-label">Canal</p>
+                        <p className="mt-1 break-all text-sm font-bold text-white">{primaryCreatorChannel?.handle || primaryCreatorChannel?.channel_id || "Nao identificado"}</p>
                       </div>
                       <div className="border border-[#a855f7]/20 bg-black/25 p-3">
-                        <p className="tactical-label">Visibilidade</p>
-                        <p className="mt-1 text-sm font-bold uppercase text-white">{publicForm.profile_visibility || visibleCreatorProfile.profile_visibility || "public"}</p>
+                        <p className="tactical-label">Ultima verificacao</p>
+                        <p className="mt-1 text-sm font-bold uppercase text-white">{primaryCreatorChannel?.last_checked_at ? new Date(primaryCreatorChannel.last_checked_at).toLocaleDateString("pt-BR") : "Pendente"}</p>
                       </div>
                     </div>
+                    {primaryChannelContent.length > 0 && (
+                      <div>
+                        <p className="tactical-label">Ultimos videos</p>
+                        <div className="mt-3 grid gap-3">
+                          {primaryChannelContent.map((content) => (
+                            <a key={content.id} href={content.content_url} target="_blank" rel="noreferrer" className="flex gap-3 border border-[#a855f7]/18 bg-black/20 p-2 hover:border-[#a855f7]/45">
+                              {content.thumbnail_url && <img src={content.thumbnail_url} alt={content.title || "Video"} className="h-16 w-28 object-cover" />}
+                              <div className="min-w-0">
+                                <p className="line-clamp-2 text-sm font-black text-white">{content.title || "Video publicado"}</p>
+                                <p className="mt-1 text-xs font-bold text-[#94a3b8]">{content.published_at ? new Date(content.published_at).toLocaleDateString("pt-BR") : "Data pendente"}</p>
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-3">

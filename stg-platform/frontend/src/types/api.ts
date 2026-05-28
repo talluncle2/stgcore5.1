@@ -347,6 +347,12 @@ export interface CreatorChannel {
   channel_url?: string;
   channel_name?: string;
   handle?: string;
+  description?: string;
+  thumbnail_url?: string;
+  subscriber_count?: number;
+  video_count?: number;
+  view_count?: number;
+  metadata_json?: Record<string, unknown>;
   is_active: boolean;
   status?: string;
   last_checked_at?: string;

@@ -9,6 +9,7 @@ from core.dependencies import require_admin, require_content_creator, require_da
 from core.models import ContentCreator, CreatorChannel, CreatorContent, DiscordMember
 from core.schemas import AuthUser, ContentCreatorCreate, ContentCreatorUpdate, CreatorChannelCreate, CreatorChannelUpdate
 from core.services.content_checker import check_creator_content
+from core.services.platforms.youtube import fetch_youtube_channel_profile
 
 router = APIRouter(tags=["creators"])
 settings = get_settings()
@@ -22,6 +23,12 @@ def serialize_channel(channel: CreatorChannel) -> dict:
         "channel_url": channel.channel_url,
         "channel_name": channel.channel_name,
         "handle": channel.handle,
+        "description": channel.description,
+        "thumbnail_url": channel.thumbnail_url,
+        "subscriber_count": channel.subscriber_count,
+        "video_count": channel.video_count,
+        "view_count": channel.view_count,
+        "metadata_json": channel.metadata_json or {},
         "is_active": channel.is_active,
         "last_checked_at": channel.last_checked_at.isoformat() if channel.last_checked_at else None,
         "created_at": channel.created_at.isoformat() if channel.created_at else None,
@@ -112,6 +119,37 @@ def get_or_create_my_creator(current_user: AuthUser, db: Session) -> ContentCrea
     db.refresh(creator)
     return creator
 
+async def sync_channel_public_profile(channel: CreatorChannel) -> None:
+    platform = str(channel.platform).lower()
+    if platform != "youtube":
+        return
+
+    result = await fetch_youtube_channel_profile(channel)
+    if result.get("status") != "ok":
+        channel.metadata_json = {
+            **(channel.metadata_json or {}),
+            "profile_sync_status": result.get("status"),
+            "profile_sync_message": result.get("message"),
+        }
+        return
+
+    for key in (
+        "channel_id",
+        "channel_name",
+        "handle",
+        "description",
+        "thumbnail_url",
+        "subscriber_count",
+        "video_count",
+        "view_count",
+        "channel_url",
+        "metadata_json",
+    ):
+        value = result.get(key)
+        if value is not None:
+            setattr(channel, key, value)
+    channel.updated_at = datetime.now(timezone.utc)
+
 @router.get("/creators")
 async def get_creators(db: Session = Depends(get_db), limit: int = Query(50, ge=1, le=100)):
     creators = db.query(ContentCreator).options(joinedload(ContentCreator.channels)).filter(
@@ -166,6 +204,7 @@ async def add_my_creator_channel(
 ):
     creator = get_or_create_my_creator(current_user, db)
     channel = CreatorChannel(creator_id=creator.id, **payload.model_dump())
+    await sync_channel_public_profile(channel)
     db.add(channel)
     db.commit()
     db.refresh(channel)
@@ -187,6 +226,7 @@ async def update_my_creator_channel(
         raise HTTPException(status_code=404, detail="Channel not found")
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(channel, key, value)
+    await sync_channel_public_profile(channel)
     channel.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(channel)
@@ -281,6 +321,7 @@ async def admin_add_channel(creator_id: str, payload: CreatorChannelCreate, curr
     if not creator:
         raise HTTPException(status_code=404, detail="Creator not found")
     channel = CreatorChannel(creator_id=creator.id, **payload.model_dump())
+    await sync_channel_public_profile(channel)
     db.add(channel)
     db.commit()
     db.refresh(channel)
@@ -293,6 +334,7 @@ async def admin_update_channel(channel_id: str, payload: CreatorChannelUpdate, c
         raise HTTPException(status_code=404, detail="Channel not found")
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(channel, key, value)
+    await sync_channel_public_profile(channel)
     channel.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(channel)

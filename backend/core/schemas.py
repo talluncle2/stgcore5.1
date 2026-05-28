@@ -223,6 +223,12 @@ class CreatorChannelBase(BaseModel):
     channel_url: Optional[str] = None
     channel_name: Optional[str] = None
     handle: Optional[str] = None
+    description: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    subscriber_count: Optional[int] = None
+    video_count: Optional[int] = None
+    view_count: Optional[int] = None
+    metadata_json: Optional[Dict[str, Any]] = {}
     is_active: bool = True
 
 class CreatorChannelCreate(CreatorChannelBase):
@@ -234,6 +240,12 @@ class CreatorChannelUpdate(BaseModel):
     channel_url: Optional[str] = None
     channel_name: Optional[str] = None
     handle: Optional[str] = None
+    description: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    subscriber_count: Optional[int] = None
+    video_count: Optional[int] = None
+    view_count: Optional[int] = None
+    metadata_json: Optional[Dict[str, Any]] = None
     is_active: Optional[bool] = None
 
 class CreatorChannelResponse(CreatorChannelBase):

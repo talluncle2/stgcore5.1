@@ -24,6 +24,12 @@ CREATE TABLE IF NOT EXISTS creator_channels (
   channel_url text,
   channel_name text,
   handle text,
+  description text,
+  thumbnail_url text,
+  subscriber_count bigint,
+  video_count bigint,
+  view_count bigint,
+  metadata_json jsonb DEFAULT '{}'::jsonb,
   is_active boolean DEFAULT true,
   last_checked_at timestamptz,
   created_at timestamptz DEFAULT now(),
@@ -59,3 +65,11 @@ CREATE INDEX IF NOT EXISTS idx_creator_channels_platform ON creator_channels(pla
 CREATE INDEX IF NOT EXISTS idx_creator_content_platform ON creator_content(platform);
 CREATE INDEX IF NOT EXISTS idx_creator_content_is_live ON creator_content(is_live);
 CREATE INDEX IF NOT EXISTS idx_creator_content_published_at ON creator_content(published_at);
+
+ALTER TABLE creator_channels
+  ADD COLUMN IF NOT EXISTS description text,
+  ADD COLUMN IF NOT EXISTS thumbnail_url text,
+  ADD COLUMN IF NOT EXISTS subscriber_count bigint,
+  ADD COLUMN IF NOT EXISTS video_count bigint,
+  ADD COLUMN IF NOT EXISTS view_count bigint,
+  ADD COLUMN IF NOT EXISTS metadata_json jsonb DEFAULT '{}'::jsonb;

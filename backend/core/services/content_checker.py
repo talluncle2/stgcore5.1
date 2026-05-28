@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 from core.models import CreatorChannel, CreatorContent
-from core.services.platforms.youtube import check_youtube_channel
+from core.services.platforms.youtube import check_youtube_channel, fetch_youtube_channel_profile
 from core.services.platforms.twitch import check_twitch_channel
 from core.services.platforms.kick import check_kick_channel
 from core.services.platforms.tiktok import check_tiktok_channel
@@ -26,6 +26,31 @@ async def check_creator_content(db: Session) -> dict:
         if not checker:
             summary["platforms"][platform] = {"status": "not_implemented", "items": 0}
             continue
+
+        if platform == "youtube":
+            profile = await fetch_youtube_channel_profile(channel)
+            if profile.get("status") == "ok":
+                for key in (
+                    "channel_id",
+                    "channel_name",
+                    "handle",
+                    "description",
+                    "thumbnail_url",
+                    "subscriber_count",
+                    "video_count",
+                    "view_count",
+                    "channel_url",
+                    "metadata_json",
+                ):
+                    value = profile.get(key)
+                    if value is not None:
+                        setattr(channel, key, value)
+            else:
+                channel.metadata_json = {
+                    **(channel.metadata_json or {}),
+                    "profile_sync_status": profile.get("status"),
+                    "profile_sync_message": profile.get("message"),
+                }
 
         result = await checker(channel)
         items = result.get("items", [])
