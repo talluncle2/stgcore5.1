@@ -96,6 +96,9 @@ export function Profile() {
   const primaryChannelContent = primaryCreatorChannel
     ? (visibleCreatorProfile?.latest_content || visibleCreatorProfile?.latest_contents || []).filter((content) => content.channel_id === primaryCreatorChannel.id).slice(0, 3)
     : [];
+  const primaryChannelName = primaryCreatorChannel?.channel_name || (primaryCreatorChannel ? getChannelLabel(primaryCreatorChannel) : "Nenhuma plataforma cadastrada");
+  const primaryChannelAvatarUrl = primaryCreatorChannel?.thumbnail_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(primaryChannelName)}&background=111827&color=c084fc`;
+  const showCreatorChannelForm = !primaryCreatorChannel || Boolean(editingChannel);
 
   useEffect(() => {
     async function load() {
@@ -322,19 +325,28 @@ export function Profile() {
 
         {activeTab === "criador" && canManageCreator && (
           <section className="space-y-5">
-            <form onSubmit={saveChannel} className="stg-hud-panel grid gap-4 p-5 md:grid-cols-[220px_1fr_auto] md:items-end">
-              <label>
-                <span className="text-xs font-black uppercase tracking-[0.08em] text-[#94a3b8]">Plataforma</span>
-                <select value={channelForm.platform} onChange={(e) => setChannelForm({ ...channelForm, platform: e.target.value as CreatorPlatform })} className="mt-2 w-full border border-[#a855f7]/25 bg-black/40 px-3 py-2 text-white">
-                  {platforms.map((platform) => <option key={platform} value={platform}>{platform}</option>)}
-                </select>
-              </label>
-              <ProfileInput label="URL publica do canal/perfil" value={channelForm.channel_url || ""} onChange={(value) => setChannelForm({ ...channelForm, channel_url: value })} />
-              <button type="submit" disabled={saving} className="stg-button-primary inline-flex items-center justify-center gap-2 disabled:opacity-50">
-                <Plus size={16} /> {editingChannel ? "Atualizar" : "Adicionar"}
-              </button>
-              <p className="md:col-span-3 text-xs text-[#94a3b8]">Informe apenas URLs publicas. Nao ha API key, OAuth ou token no frontend.</p>
-            </form>
+            {showCreatorChannelForm && (
+              <form onSubmit={saveChannel} className="stg-hud-panel grid gap-4 p-5 md:grid-cols-[220px_1fr_auto] md:items-end">
+                <label>
+                  <span className="text-xs font-black uppercase tracking-[0.08em] text-[#94a3b8]">Plataforma</span>
+                  <select value={channelForm.platform} onChange={(e) => setChannelForm({ ...channelForm, platform: e.target.value as CreatorPlatform })} className="mt-2 w-full border border-[#a855f7]/25 bg-black/40 px-3 py-2 text-white">
+                    {platforms.map((platform) => <option key={platform} value={platform}>{platform}</option>)}
+                  </select>
+                </label>
+                <ProfileInput label="URL publica do canal/perfil" value={channelForm.channel_url || ""} onChange={(value) => setChannelForm({ ...channelForm, channel_url: value })} />
+                <div className="flex gap-2">
+                  <button type="submit" disabled={saving} className="stg-button-primary inline-flex items-center justify-center gap-2 disabled:opacity-50">
+                    <Plus size={16} /> {editingChannel ? "Atualizar" : "Adicionar"}
+                  </button>
+                  {editingChannel && (
+                    <button type="button" onClick={() => { setEditingChannel(null); setChannelForm(emptyChannel); }} className="stg-button-outline px-4 py-2 text-xs">
+                      Cancelar
+                    </button>
+                  )}
+                </div>
+                <p className="md:col-span-3 text-xs text-[#94a3b8]">Informe apenas URLs publicas. A plataforma permanece cadastrada ate voce remover manualmente.</p>
+              </form>
+            )}
 
             {visibleCreatorProfile && (
               <section className="overflow-hidden border border-[#a855f7]/35 bg-[#050608] shadow-xl shadow-[#a855f7]/10">
@@ -347,14 +359,14 @@ export function Profile() {
                   <div className="flex min-h-44 flex-col justify-end gap-5 p-5 md:flex-row md:items-end md:justify-between">
                     <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
                       <img
-                        src={primaryCreatorChannel?.thumbnail_url || avatarUrl}
-                        alt={primaryCreatorChannel?.channel_name || getChannelLabel(primaryCreatorChannel || { platform: "youtube", id: "", creator_id: "", is_active: true })}
+                        src={primaryChannelAvatarUrl}
+                        alt={primaryChannelName}
                         className="size-24 rounded-full border-4 border-[#050608] object-cover shadow-xl shadow-[#a855f7]/20"
                       />
                       <div className="min-w-0">
                         <p className="tactical-label">Perfil publico sincronizado</p>
                         <h2 className="mt-1 break-words text-2xl font-black uppercase tracking-[0.08em] text-white">
-                          {primaryCreatorChannel?.channel_name || (primaryCreatorChannel ? getChannelLabel(primaryCreatorChannel) : "Nenhuma plataforma cadastrada")}
+                          {primaryChannelName}
                         </h2>
                         <div className="mt-3 flex flex-wrap gap-2">
                           {primaryCreatorChannel && <CreatorPlatformBadge platform={primaryCreatorChannel.platform} />}

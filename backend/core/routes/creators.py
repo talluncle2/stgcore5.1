@@ -186,6 +186,10 @@ async def get_my_creator(
     db: Session = Depends(get_db),
 ):
     creator = get_or_create_my_creator(current_user, db)
+    for channel in creator.channels:
+        await sync_channel_public_profile(channel)
+    db.commit()
+    db.refresh(creator)
     return serialize_creator(creator, include_content=True)
 
 @router.post("/creators/me/register")
@@ -194,6 +198,10 @@ async def register_my_creator(
     db: Session = Depends(get_db),
 ):
     creator = get_or_create_my_creator(current_user, db)
+    for channel in creator.channels:
+        await sync_channel_public_profile(channel)
+    db.commit()
+    db.refresh(creator)
     return {"creator": serialize_creator(creator, include_content=True), "channels": [serialize_channel(channel) for channel in creator.channels]}
 
 @router.post("/creators/me/channels")
