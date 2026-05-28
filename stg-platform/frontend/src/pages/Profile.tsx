@@ -8,10 +8,11 @@ import {
   addMyCreatorChannel,
   disableMyCreatorChannel,
   getMyCreatorProfile,
+  registerMyCreatorProfile,
   updateMyCreatorChannel,
 } from "../services/creatorsService";
 import { getMyPublicProfile, updateMyPublicProfile } from "../services/profileService";
-import { ContentCreator, CreatorChannel, CreatorChannelPayload, CreatorPlatform, PublicProfilePayload } from "../types/api";
+import { AuthUser, ContentCreator, CreatorChannel, CreatorChannelPayload, CreatorPlatform, PublicProfilePayload } from "../types/api";
 import { hasAdminAccess, hasCreatorAccess } from "../utils/permissions";
 
 type ProfileTab = "resumo" | "publico" | "criador" | "privacidade";
@@ -36,6 +37,22 @@ const emptyChannel: CreatorChannelPayload = {
   channel_url: "",
   is_active: true,
 };
+
+function createLocalCreatorProfile(user: AuthUser, channel?: CreatorChannel): ContentCreator {
+  return {
+    id: channel?.creator_id || String(user.discord_id || user.id || "me"),
+    discord_id: String(user.discord_id || ""),
+    display_name: user.display_name || user.global_name || user.username || user.discord_username,
+    username: user.username || user.discord_username,
+    avatar_url: user.avatar_url || user.discord_avatar_url,
+    is_active: true,
+    is_featured: false,
+    sort_order: 0,
+    channels: channel ? [channel] : [],
+    latest_content: [],
+    latest_contents: [],
+  };
+}
 
 export function Profile() {
   const { user, profile, refreshUser } = useAuth();
@@ -64,6 +81,7 @@ export function Profile() {
         getMyPublicProfile(),
         canManageCreator ? getMyCreatorProfile() : Promise.resolve(null),
       ]);
+      const registeredCreator = !creator && canManageCreator ? await registerMyCreatorProfile() : null;
       setPublicForm({
         ...emptyProfile,
         public_name: publicProfile?.public_name || user?.public_name || username,
@@ -77,7 +95,7 @@ export function Profile() {
         sexual_orientation_visibility: publicProfile?.sexual_orientation_visibility || user?.sexual_orientation_visibility || "private",
         profile_visibility: publicProfile?.profile_visibility || user?.profile_visibility || "public",
       });
-      setCreatorProfile(creator);
+      setCreatorProfile(creator || registeredCreator?.creator || null);
       setLoading(false);
     }
     void load();
@@ -123,19 +141,38 @@ export function Profile() {
 
   async function saveChannel(event: FormEvent) {
     event.preventDefault();
+    const currentUser = user;
+    if (!currentUser) return;
     setSaving(true);
     setError(null);
     try {
       if (editingChannel) {
-        await updateMyCreatorChannel(editingChannel.id, channelForm);
+        const updatedChannel = await updateMyCreatorChannel(editingChannel.id, channelForm);
+        setCreatorProfile((current) => {
+          const base = current || createLocalCreatorProfile(currentUser, updatedChannel);
+          return {
+            ...base,
+            channels: base.channels.map((channel) => channel.id === updatedChannel.id ? updatedChannel : channel),
+          };
+        });
         setNotice("Canal atualizado.");
       } else {
-        await addMyCreatorChannel(channelForm);
+        const createdChannel = await addMyCreatorChannel(channelForm);
+        setCreatorProfile((current) => {
+          const base = current || createLocalCreatorProfile(currentUser, createdChannel);
+          return {
+            ...base,
+            channels: [...base.channels.filter((channel) => channel.id !== createdChannel.id), createdChannel],
+          };
+        });
         setNotice("Canal cadastrado para monitoramento.");
       }
       setChannelForm(emptyChannel);
       setEditingChannel(null);
-      setCreatorProfile(await getMyCreatorProfile());
+      const refreshedCreator = await getMyCreatorProfile();
+      if (refreshedCreator) {
+        setCreatorProfile(refreshedCreator);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nao foi possivel salvar o canal.");
     } finally {
@@ -149,7 +186,14 @@ export function Profile() {
     try {
       await disableMyCreatorChannel(channel.id);
       setNotice("Canal removido/desativado.");
-      setCreatorProfile(await getMyCreatorProfile());
+      setCreatorProfile((current) => current ? {
+        ...current,
+        channels: current.channels.filter((item) => item.id !== channel.id),
+      } : current);
+      const refreshedCreator = await getMyCreatorProfile();
+      if (refreshedCreator) {
+        setCreatorProfile(refreshedCreator);
+      }
     } catch {
       setError("Recurso aguardando integração da API para remover canais.");
     } finally {
