@@ -1,6 +1,26 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AtSign, ExternalLink, EyeOff, Link as LinkIcon, Lock, Plus, RefreshCw, Save, Trash2, User as UserIcon, Video } from "lucide-react";
+import {
+  AtSign,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Crosshair,
+  ExternalLink,
+  EyeOff,
+  Flame,
+  Link as LinkIcon,
+  Lock,
+  Play,
+  Plus,
+  Radio,
+  RefreshCw,
+  Save,
+  Shield,
+  Trash2,
+  User as UserIcon,
+  Video,
+} from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { CreatorPlatformBadge } from "../components/creators/CreatorPlatformBadge";
 import { useAuth } from "../context/AuthContext";
@@ -18,6 +38,26 @@ import { hasAdminAccess, hasCreatorAccess } from "../utils/permissions";
 type ProfileTab = "resumo" | "publico" | "criador" | "privacidade";
 
 const platforms: CreatorPlatform[] = ["youtube", "twitch", "kick", "tiktok", "instagram", "x"];
+
+const platformColors: Record<string, string> = {
+  youtube: "#FF0000",
+  twitch: "#9146FF",
+  kick: "#53FC18",
+  tiktok: "#ff0050",
+  instagram: "#E1306C",
+  x: "#e7e9ea",
+  twitter: "#e7e9ea",
+};
+
+const platformLabels: Record<string, string> = {
+  youtube: "YouTube",
+  twitch: "Twitch",
+  kick: "Kick",
+  tiktok: "TikTok",
+  instagram: "Instagram",
+  x: "X / Twitter",
+  twitter: "X / Twitter",
+};
 
 const emptyProfile: PublicProfilePayload = {
   public_name: "",
@@ -70,6 +110,187 @@ function getChannelLabel(channel: CreatorChannel): string {
 function formatCompactNumber(value?: number): string {
   if (value === undefined || value === null) return "N/A";
   return Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
+function Corners({ size = 10, color = "rgba(168,85,247,0.7)" }: { size?: number; color?: string }) {
+  const s = `${size}px`;
+  const b = `1.5px solid ${color}`;
+  return (
+    <>
+      <span style={{ position: "absolute", top: 0, left: 0, width: s, height: s, borderTop: b, borderLeft: b }} />
+      <span style={{ position: "absolute", top: 0, right: 0, width: s, height: s, borderTop: b, borderRight: b }} />
+      <span style={{ position: "absolute", bottom: 0, left: 0, width: s, height: s, borderBottom: b, borderLeft: b }} />
+      <span style={{ position: "absolute", bottom: 0, right: 0, width: s, height: s, borderBottom: b, borderRight: b }} />
+    </>
+  );
+}
+
+function Scanlines({ opacity = 0.04 }: { opacity?: number }) {
+  return (
+    <div
+      aria-hidden
+      style={{
+        position: "absolute",
+        inset: 0,
+        backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,1) 2px, rgba(0,0,0,1) 4px)",
+        opacity,
+        pointerEvents: "none",
+      }}
+    />
+  );
+}
+
+function PlatformBadge({ platform }: { platform?: string }) {
+  const normalized = String(platform || "youtube").toLowerCase();
+  const color = platformColors[normalized] || "#a855f7";
+  const label = platformLabels[normalized] || platform || "Canal";
+  return (
+    <span
+      style={{ borderColor: `${color}55`, color, background: `${color}12` }}
+      className="inline-flex items-center gap-1.5 border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest"
+    >
+      <span style={{ width: 5, height: 5, borderRadius: "50%", background: color, boxShadow: `0 0 5px ${color}`, display: "inline-block", flexShrink: 0 }} />
+      {label}
+    </span>
+  );
+}
+
+function HudPanel({ children, className = "", accent = false }: { children: ReactNode; className?: string; accent?: boolean }) {
+  return (
+    <div
+      className={`relative border border-purple-500/20 bg-[#08090e] ${className}`}
+      style={{ boxShadow: accent ? "0 0 0 1px rgba(168,85,247,0.08) inset, 0 8px 40px rgba(0,0,0,0.7), 0 0 20px rgba(168,85,247,0.05)" : "0 4px 24px rgba(0,0,0,0.5)" }}
+    >
+      <div className="absolute left-0 top-0 h-[1px] w-20 bg-gradient-to-r from-purple-500/80 to-transparent" />
+      <div className="absolute bottom-0 right-0 h-[1px] w-12 bg-gradient-to-l from-purple-500/30 to-transparent" />
+      <Corners size={8} />
+      {children}
+    </div>
+  );
+}
+
+function TacticalInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.18em] text-purple-400/80">{label}</span>
+      <div className="relative">
+        <input
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className="w-full border border-purple-500/15 bg-black/60 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-700 focus:border-purple-500/50 focus:bg-black/80"
+          style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.04)" }}
+        />
+      </div>
+    </label>
+  );
+}
+
+function TacticalSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.18em] text-purple-400/80">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="w-full border border-purple-500/15 bg-black/60 px-3 py-2.5 text-sm text-white outline-none focus:border-purple-500/50"
+        style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.04)" }}
+      >
+        {children}
+      </select>
+    </label>
+  );
+}
+
+function SectionHeader({ icon: Icon, title }: { icon: ElementType; title: string }) {
+  return (
+    <div className="flex items-center gap-3 border-b border-purple-500/10 px-5 py-4">
+      <div className="flex h-6 w-6 items-center justify-center border border-purple-500/30 bg-purple-500/10">
+        <Icon size={12} className="text-purple-400" />
+      </div>
+      <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300">{title}</h3>
+      <div className="ml-auto h-[1px] w-12 bg-gradient-to-l from-transparent to-purple-500/30" />
+    </div>
+  );
+}
+
+function TacticalSubmitButton({ saving, children }: { saving?: boolean; children: ReactNode }) {
+  return (
+    <button
+      type="submit"
+      disabled={saving}
+      className="group relative overflow-hidden border border-purple-500/50 px-5 py-2.5 text-xs font-black uppercase tracking-[0.15em] text-white transition-all hover:border-purple-400/80 disabled:opacity-50"
+      style={{ background: "linear-gradient(135deg, rgba(88,28,135,0.3) 0%, rgba(126,34,206,0.15) 100%)" }}
+    >
+      <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-purple-400/8 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+      <span className="relative flex items-center justify-center gap-2">{children}</span>
+    </button>
+  );
+}
+
+function VideoCarousel({ videos }: { videos: Array<{ id: string; title?: string; thumbnail_url?: string; content_url?: string; published_at?: string }> }) {
+  const [active, setActive] = useState(0);
+  if (!videos.length) return null;
+
+  const current = videos[Math.min(active, videos.length - 1)];
+  const prev = () => setActive((index) => (index - 1 + videos.length) % videos.length);
+  const next = () => setActive((index) => (index + 1) % videos.length);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-3">
+        <div className="flex h-6 w-6 items-center justify-center border border-purple-500/30 bg-purple-500/10">
+          <Play size={11} className="text-purple-400" />
+        </div>
+        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-400/70">Ultimos Videos</p>
+        <div className="h-[1px] flex-1 bg-gradient-to-r from-purple-500/20 to-transparent" />
+        <span className="text-[9px] font-black text-slate-600">{active + 1} / {videos.length}</span>
+      </div>
+
+      <a href={current.content_url || "#"} target="_blank" rel="noreferrer" className="group relative block overflow-hidden border border-purple-500/25 transition-all duration-300 hover:border-purple-500/50" style={{ boxShadow: "0 0 40px rgba(168,85,247,0.08)" }}>
+        <Corners size={10} />
+        <div className="relative h-52 overflow-hidden bg-black/60">
+          {current.thumbnail_url && <img src={current.thumbnail_url} alt={current.title || "Video"} className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105" style={{ filter: "brightness(0.6) saturate(1.1)" }} />}
+          <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(2,3,7,0.98) 0%, rgba(2,3,7,0.55) 40%, rgba(46,16,101,0.18) 70%, transparent 100%)" }} />
+          <div className="absolute inset-0" style={{ background: "linear-gradient(90deg, rgba(2,3,7,0.7) 0%, transparent 50%)" }} />
+          <Scanlines opacity={0.05} />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="flex h-16 w-16 items-center justify-center border-2 border-white/20 bg-black/40 transition-all duration-300 group-hover:border-purple-400/60 group-hover:bg-purple-500/20" style={{ backdropFilter: "blur(4px)", boxShadow: "0 0 30px rgba(168,85,247,0.2)" }}>
+              <Play size={24} className="ml-1 text-white/80 transition-colors group-hover:text-purple-300" fill="currentColor" />
+            </div>
+          </div>
+          {active === 0 && (
+            <div className="absolute left-4 top-4 flex items-center gap-1.5 border border-orange-500/50 bg-orange-500/15 px-2.5 py-1">
+              <Flame size={10} className="text-orange-400" />
+              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-orange-300">Destaque</span>
+            </div>
+          )}
+          <div className="absolute right-4 top-4 border border-purple-500/30 bg-black/60 px-2 py-0.5" style={{ backdropFilter: "blur(4px)" }}>
+            <span className="font-mono text-[9px] font-black text-purple-300">#{String(active + 1).padStart(2, "0")}</span>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-4">
+            <p className="line-clamp-2 text-base font-black leading-snug text-white" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>{current.title || "Video publicado"}</p>
+            <div className="mt-2 flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
+                <CalendarDays size={10} />
+                {current.published_at ? new Date(current.published_at).toLocaleDateString("pt-BR") : "Data pendente"}
+              </span>
+            </div>
+          </div>
+          {videos.length > 1 && (
+            <>
+              <button type="button" onClick={(event) => { event.preventDefault(); prev(); }} className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center border border-white/15 bg-black/50 text-white/60 transition-all hover:border-purple-400/50 hover:bg-purple-500/20 hover:text-white">
+                <ChevronLeft size={16} />
+              </button>
+              <button type="button" onClick={(event) => { event.preventDefault(); next(); }} className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center border border-white/15 bg-black/50 text-white/60 transition-all hover:border-purple-400/50 hover:bg-purple-500/20 hover:text-white">
+                <ChevronRight size={16} />
+              </button>
+            </>
+          )}
+        </div>
+      </a>
+    </div>
+  );
 }
 
 export function Profile() {
@@ -229,39 +450,105 @@ export function Profile() {
 
   return (
     <Layout>
-      <div className="mx-auto max-w-6xl space-y-6">
-        <section className="overflow-hidden border border-[#a855f7]/35 bg-[#050608]">
-          <div className="h-44 bg-cover bg-center" style={{ backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.82), rgba(46,16,101,.42)), url("${publicForm.public_banner_url || "/assets/tactical-ops-bg.png"}")` }} />
-          <div className="-mt-14 flex flex-col gap-4 p-6 md:flex-row md:items-end">
-            <img src={avatarUrl} alt={username} className="size-28 rounded-full border-4 border-[#050608] object-cover shadow-xl shadow-[#a855f7]/20" />
-            <div className="min-w-0 flex-1">
-              <p className="tactical-label">Perfil operacional</p>
-              <h1 className="mt-1 text-3xl font-black uppercase tracking-[0.08em] text-white">{publicForm.public_name || username}</h1>
+      <div className="relative mx-auto max-w-6xl space-y-5 bg-[#020307] p-4 pb-16 pt-6 font-sans">
+        <div aria-hidden className="pointer-events-none fixed inset-0 overflow-hidden">
+          <div className="absolute -left-40 top-0 h-[500px] w-[500px] rounded-full opacity-[0.04]" style={{ background: "radial-gradient(circle, #a855f7 0%, transparent 70%)" }} />
+          <div className="absolute -right-20 top-40 h-[300px] w-[300px] rounded-full opacity-[0.03]" style={{ background: "radial-gradient(circle, #7c3aed 0%, transparent 70%)" }} />
+        </div>
+
+        <section className="relative overflow-hidden border border-purple-500/25" style={{ background: "#040508", boxShadow: "0 0 80px rgba(168,85,247,0.06), 0 0 0 1px rgba(168,85,247,0.03) inset" }}>
+          <Corners size={14} color="rgba(168,85,247,0.6)" />
+          <div
+            className="relative h-52 bg-cover bg-center"
+            style={{ backgroundImage: `linear-gradient(160deg, rgba(0,0,0,.95) 0%, rgba(46,16,101,.4) 55%, rgba(0,0,0,.90) 100%), url("${publicForm.public_banner_url || primaryChannelContent[0]?.thumbnail_url || "/assets/tactical-ops-bg.png"}")` }}
+          >
+            <Scanlines opacity={0.06} />
+            <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.025]" style={{ backgroundImage: "linear-gradient(rgba(168,85,247,1) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,1) 1px, transparent 1px)", backgroundSize: "48px 48px" }} />
+            <div aria-hidden className="absolute right-8 top-1/2 flex -translate-y-1/2 flex-col gap-1.5 opacity-[0.12]">
+              {[80, 56, 40, 28, 18, 10].map((width, index) => (
+                <div key={index} className="h-[1px] bg-gradient-to-l from-purple-400 to-transparent" style={{ width }} />
+              ))}
+            </div>
+            <div className="absolute bottom-4 right-5 text-right opacity-20">
+              <p className="font-mono text-[8px] font-bold uppercase tracking-[0.3em] text-purple-300">SUPREMO TRIBUNAL GAMER</p>
+              <p className="font-mono text-[8px] text-purple-400/80">OPERADOR // PERFIL v2.6</p>
+            </div>
+          </div>
+
+          <div className="-mt-16 flex flex-col gap-4 px-6 pb-6 md:flex-row md:items-end">
+            <div className="relative shrink-0">
+              <div aria-hidden className="absolute -inset-1.5 rounded-full opacity-40" style={{ background: "conic-gradient(from 0deg, transparent 0%, #a855f7 30%, transparent 60%, #7c3aed 80%, transparent 100%)" }} />
+              <div className="absolute -inset-1.5 rounded-full opacity-20" style={{ background: "conic-gradient(from 180deg, transparent 0%, #a855f7 30%, transparent 60%, #7c3aed 80%, transparent 100%)" }} />
+              <img src={avatarUrl} alt={username} className="relative size-28 rounded-full border-2 border-[#040508] object-cover" style={{ boxShadow: "0 0 0 2px rgba(168,85,247,0.5), 0 0 40px rgba(168,85,247,0.3)" }} />
+              <span className="absolute bottom-1 right-1 flex h-4 w-4">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-50" />
+                <span className="relative inline-flex h-4 w-4 rounded-full border-2 border-[#040508] bg-green-500" style={{ boxShadow: "0 0 6px #4ade80" }} />
+              </span>
+            </div>
+
+            <div className="min-w-0 flex-1 pb-1">
+              <div className="flex items-center gap-2 text-[9px]">
+                <Crosshair size={9} className="text-purple-400/60" />
+                <span className="font-black uppercase tracking-[0.25em] text-purple-400/60">Perfil Operacional</span>
+                <div className="h-[1px] max-w-24 flex-1 bg-gradient-to-r from-purple-500/30 to-transparent" />
+              </div>
+              <h1 className="mt-1.5 text-3xl font-black uppercase tracking-[0.07em] text-white" style={{ textShadow: "0 0 40px rgba(168,85,247,0.25)" }}>{publicForm.public_name || username}</h1>
               <div className="mt-3 flex flex-wrap gap-2">
-                <span className="stg-badge-purple">Discord sincronizado</span>
-                {user.is_content_creator && <span className="stg-badge-danger">Criador STG</span>}
-                {isAdmin && <span className="stg-badge-success">Admin</span>}
+                <span className="flex items-center gap-1.5 border border-purple-500/45 bg-purple-500/12 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-purple-300"><Radio size={9} /> Discord Sincronizado</span>
+                {user.is_content_creator && <span className="flex items-center gap-1.5 border border-red-500/45 bg-red-500/12 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-red-300"><Video size={9} /> Criador STG</span>}
+                {isAdmin && <span className="flex items-center gap-1.5 border border-green-500/45 bg-green-500/12 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.18em] text-green-300"><Shield size={9} /> Admin</span>}
+              </div>
+            </div>
+
+            <div className="hidden shrink-0 gap-6 md:flex">
+              <div className="text-right">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-400/60">Rank</p>
+                <p className="font-mono text-xl font-black text-white" style={{ textShadow: "0 0 16px rgba(168,85,247,0.3)" }}>{profile.level || "N/A"}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-400/60">Coins</p>
+                <p className="font-mono text-xl font-black text-white" style={{ textShadow: "0 0 16px rgba(168,85,247,0.3)" }}>{profile.coins || 0}</p>
               </div>
             </div>
           </div>
         </section>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="relative flex flex-wrap gap-1.5">
+          <div className="absolute inset-x-0 bottom-0 h-[1px] bg-purple-500/10" />
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const active = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id)}
-                className={`inline-flex items-center gap-2 border px-4 py-2 text-xs font-black uppercase tracking-[0.08em] ${
-                  activeTab === tab.id ? "border-[#a855f7]/55 bg-[#a855f7]/20 text-white" : "border-[#a855f7]/18 bg-[#111827]/70 text-[#94a3b8]"
+                className={`group relative overflow-hidden border px-5 py-2.5 text-[10px] font-black uppercase tracking-[0.18em] transition-all duration-200 ${
+                  active ? "border-purple-500/50 text-white" : "border-purple-500/12 text-slate-500 hover:border-purple-500/25 hover:text-slate-300"
                 }`}
+                style={active ? { background: "linear-gradient(160deg, rgba(88,28,135,0.25) 0%, rgba(126,34,206,0.12) 100%)", boxShadow: "0 0 20px rgba(168,85,247,0.08)" } : { background: "rgba(8,9,14,0.8)" }}
               >
-                <Icon size={15} /> {tab.label}
+                {active && (
+                  <>
+                    <span className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent" />
+                    <span className="absolute inset-x-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-purple-400/30 to-transparent" />
+                  </>
+                )}
+                <span className="relative flex items-center gap-2">
+                  <Icon size={12} className={active ? "text-purple-400" : "text-slate-600 group-hover:text-slate-400"} />
+                  {tab.label}
+                  {active && <ChevronRight size={10} className="text-purple-500" />}
+                </span>
               </button>
             );
           })}
+          <div className="ml-auto flex items-center gap-2 self-center pr-1">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-50" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-400" />
+            </span>
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600">Live</span>
+          </div>
         </div>
 
         {notice && <div className="border border-[#84cc16]/35 bg-[#84cc16]/10 p-3 text-sm font-bold text-[#bef264]">{notice}</div>}
@@ -326,74 +613,93 @@ export function Profile() {
         {activeTab === "criador" && canManageCreator && (
           <section className="space-y-5">
             {showCreatorChannelForm && (
-              <form onSubmit={saveChannel} className="stg-hud-panel grid gap-4 p-5 md:grid-cols-[220px_1fr_auto] md:items-end">
-                <label>
-                  <span className="text-xs font-black uppercase tracking-[0.08em] text-[#94a3b8]">Plataforma</span>
-                  <select value={channelForm.platform} onChange={(e) => setChannelForm({ ...channelForm, platform: e.target.value as CreatorPlatform })} className="mt-2 w-full border border-[#a855f7]/25 bg-black/40 px-3 py-2 text-white">
-                    {platforms.map((platform) => <option key={platform} value={platform}>{platform}</option>)}
-                  </select>
-                </label>
-                <ProfileInput label="URL publica do canal/perfil" value={channelForm.channel_url || ""} onChange={(value) => setChannelForm({ ...channelForm, channel_url: value })} />
-                <div className="flex gap-2">
-                  <button type="submit" disabled={saving} className="stg-button-primary inline-flex items-center justify-center gap-2 disabled:opacity-50">
-                    <Plus size={16} /> {editingChannel ? "Atualizar" : "Adicionar"}
-                  </button>
-                  {editingChannel && (
-                    <button type="button" onClick={() => { setEditingChannel(null); setChannelForm(emptyChannel); }} className="stg-button-outline px-4 py-2 text-xs">
-                      Cancelar
-                    </button>
-                  )}
-                </div>
-                <p className="md:col-span-3 text-xs text-[#94a3b8]">Informe apenas URLs publicas. A plataforma permanece cadastrada ate voce remover manualmente.</p>
+              <form onSubmit={saveChannel}>
+                <HudPanel>
+                  <SectionHeader icon={editingChannel ? LinkIcon : Plus} title={editingChannel ? "Editar Canal" : "Adicionar Canal"} />
+                  <div className="grid gap-4 p-5 md:grid-cols-[220px_1fr_auto] md:items-end">
+                    <TacticalSelect label="Plataforma" value={channelForm.platform || "youtube"} onChange={(value) => setChannelForm({ ...channelForm, platform: value as CreatorPlatform })}>
+                      {platforms.map((platform) => <option key={platform} value={platform}>{platformLabels[platform] || platform}</option>)}
+                    </TacticalSelect>
+                    <TacticalInput label="URL Publica do Canal / Perfil" value={channelForm.channel_url || ""} onChange={(value) => setChannelForm({ ...channelForm, channel_url: value })} placeholder="https://youtube.com/@seucanal" />
+                    <div className="flex gap-2">
+                      <TacticalSubmitButton saving={saving}><Plus size={13} /> {editingChannel ? "Atualizar" : "Adicionar"}</TacticalSubmitButton>
+                      {editingChannel && (
+                        <button type="button" onClick={() => { setEditingChannel(null); setChannelForm(emptyChannel); }} className="border border-slate-700/50 bg-slate-900/60 px-4 py-2.5 text-xs font-black uppercase tracking-[0.12em] text-slate-500 hover:border-slate-600 hover:text-slate-300">
+                          Cancelar
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <p className="px-5 pb-4 text-[10px] text-slate-600">Informe apenas URLs publicas. A plataforma permanece cadastrada ate voce remover manualmente.</p>
+                </HudPanel>
               </form>
             )}
 
             {visibleCreatorProfile && (
-              <section className="overflow-hidden border border-[#a855f7]/35 bg-[#050608] shadow-xl shadow-[#a855f7]/10">
+              <section className="relative overflow-hidden border border-purple-500/25" style={{ background: "#050608", boxShadow: "0 0 60px rgba(168,85,247,0.07), 0 0 0 1px rgba(168,85,247,0.04) inset" }}>
+                <Corners size={12} color="rgba(168,85,247,0.5)" />
                 <div
-                  className="min-h-44 bg-cover bg-center"
+                  className="relative min-h-52 bg-cover bg-center"
                   style={{
-                    backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.88), rgba(17,24,39,.72), rgba(88,28,135,.38)), url("${primaryChannelContent[0]?.thumbnail_url || "/assets/tactical-ops-bg.png"}")`,
+                    backgroundImage: `linear-gradient(160deg, rgba(0,0,0,.97) 0%, rgba(46,16,101,.45) 50%, rgba(0,0,0,.88) 100%), url("${primaryChannelContent[0]?.thumbnail_url || "/assets/tactical-ops-bg.png"}")`,
                   }}
                 >
-                  <div className="flex min-h-44 flex-col justify-end gap-5 p-5 md:flex-row md:items-end md:justify-between">
+                  <Scanlines opacity={0.05} />
+                  <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(rgba(168,85,247,1) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,1) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
+                  <div className="absolute right-5 top-4 text-right opacity-25">
+                    <p className="font-mono text-[9px] font-bold uppercase tracking-[0.25em] text-purple-300">STG // CREATOR INTEL</p>
+                    <p className="font-mono text-[9px] text-purple-400">SYNC {primaryCreatorChannel?.last_checked_at ? `✓ ${new Date(primaryCreatorChannel.last_checked_at).toLocaleDateString("pt-BR")}` : "PENDENTE"}</p>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 flex flex-col justify-end gap-5 p-5 md:flex-row md:items-end md:justify-between">
                     <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
-                      <img
-                        src={primaryChannelAvatarUrl}
-                        alt={primaryChannelName}
-                        className="size-24 rounded-full border-4 border-[#050608] object-cover shadow-xl shadow-[#a855f7]/20"
-                      />
+                      <div className="relative shrink-0">
+                        <div className="absolute -inset-1 rounded-full opacity-50" style={{ background: "conic-gradient(from 0deg, #a855f7, transparent, #a855f7)" }} />
+                        <img src={primaryChannelAvatarUrl} alt={primaryChannelName} className="relative size-[76px] rounded-full border-2 border-purple-500/60 object-cover" style={{ boxShadow: "0 0 24px rgba(168,85,247,0.5)" }} />
+                        <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#050608] bg-green-500" style={{ boxShadow: "0 0 8px #4ade80" }} />
+                      </div>
                       <div className="min-w-0">
-                        <p className="tactical-label">Perfil publico sincronizado</p>
-                        <h2 className="mt-1 break-words text-2xl font-black uppercase tracking-[0.08em] text-white">
+                        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400/70">Perfil Publico Sincronizado</p>
+                        <h2 className="mt-1 text-2xl font-black uppercase tracking-[0.06em] text-white" style={{ textShadow: "0 0 30px rgba(168,85,247,0.3)" }}>
                           {primaryChannelName}
                         </h2>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          {primaryCreatorChannel && <CreatorPlatformBadge platform={primaryCreatorChannel.platform} />}
-                          <span className="stg-badge-purple">{visibleCreatorProfile.channels.length} plataforma{visibleCreatorProfile.channels.length === 1 ? "" : "s"}</span>
-                          {primaryCreatorChannel?.is_active && <span className="stg-badge-success">Sincronizado</span>}
+                        <div className="mt-2.5 flex flex-wrap gap-2">
+                          {primaryCreatorChannel && <PlatformBadge platform={primaryCreatorChannel.platform} />}
+                          <span className="border border-purple-500/35 bg-purple-500/12 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-purple-300">{visibleCreatorProfile.channels.length} Plataformas</span>
+                          {primaryCreatorChannel?.is_active && (
+                            <span className="flex items-center gap-1.5 border border-green-500/35 bg-green-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-green-400">
+                              <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-60" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-400" /></span>
+                              Sincronizado
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="grid gap-2 text-left md:min-w-64">
-                      <div>
-                        <p className="tactical-label">Inscritos</p>
-                        <p className="break-all font-mono text-sm font-bold text-white">{formatCompactNumber(primaryCreatorChannel?.subscriber_count)}</p>
-                      </div>
-                      <div>
-                        <p className="tactical-label">Videos / views</p>
-                        <p className="break-all text-sm font-bold text-white">{formatCompactNumber(primaryCreatorChannel?.video_count)} / {formatCompactNumber(primaryCreatorChannel?.view_count)}</p>
-                      </div>
+                    <div className="grid grid-cols-3 gap-2 md:min-w-80">
+                      {[
+                        { label: "Inscritos", value: formatCompactNumber(primaryCreatorChannel?.subscriber_count) },
+                        { label: "Videos", value: formatCompactNumber(primaryCreatorChannel?.video_count) },
+                        { label: "Views", value: formatCompactNumber(primaryCreatorChannel?.view_count) },
+                      ].map((stat) => (
+                        <div key={stat.label} className="relative border border-purple-500/20 p-3 text-center" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}>
+                          <p className="text-[9px] font-black uppercase tracking-[0.15em] text-purple-400/70">{stat.label}</p>
+                          <p className="mt-1 font-mono text-lg font-black text-white" style={{ textShadow: "0 0 12px rgba(168,85,247,0.4)" }}>{stat.value}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
 
-                <div className="grid gap-5 p-5 lg:grid-cols-[1fr_1.4fr]">
+                <div className="space-y-6 p-5">
+                  <VideoCarousel videos={primaryChannelContent} />
+                  <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
                   <div className="space-y-4">
                     <div>
-                      <p className="tactical-label">Bio publica</p>
-                      <p className="mt-2 text-sm leading-6 text-[#cbd5e1]">{primaryCreatorChannel?.description || "A bio publica da plataforma ainda nao foi sincronizada."}</p>
+                      <div className="relative border border-purple-500/15 bg-black/25 p-4" style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.06)" }}>
+                        <Corners size={6} />
+                        <p className="mb-2 text-[9px] font-black uppercase tracking-[0.2em] text-purple-400/70">Bio Publica</p>
+                        <p className="text-sm leading-6 text-slate-400">{primaryCreatorChannel?.description || "A bio publica da plataforma ainda nao foi sincronizada."}</p>
+                      </div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <div className="border border-[#a855f7]/20 bg-black/25 p-3">
@@ -455,6 +761,7 @@ export function Profile() {
                         </div>
                       </div>
                     ))}
+                  </div>
                   </div>
                 </div>
               </section>
