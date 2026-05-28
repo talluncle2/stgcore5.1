@@ -18,6 +18,7 @@ import {
 import { Profile } from "../lib/supabase";
 import {
   hasAdminAccess,
+  hasCreatorAccess,
   hasDashboardAccess,
   hasModeratorAccess,
 } from "../utils/permissions";
@@ -89,7 +90,13 @@ function profileFromUser(user: AuthUser | null): Profile | null {
     discord_id: user.discord_id ? String(user.discord_id) : undefined,
     avatar_url: user.avatar_url || user.discord_avatar_url || user.image_url,
     discord_avatar_url: user.discord_avatar_url || user.avatar_url,
-    is_content_creator: user.is_content_creator === true,
+    roles: user.roles,
+    role_ids: user.role_ids,
+    discord_roles: user.discord_roles,
+    guild_roles: user.guild_roles,
+    permissions: user.permissions,
+    sectors: user.sectors,
+    is_content_creator: hasCreatorAccess(user),
     public_name: user.public_name,
     public_avatar_url: user.public_avatar_url,
     public_banner_url: user.public_banner_url,
@@ -100,11 +107,11 @@ function profileFromUser(user: AuthUser | null): Profile | null {
     sexual_orientation: user.sexual_orientation,
     sexual_orientation_visibility: user.sexual_orientation_visibility || "private",
     profile_visibility: user.profile_visibility || "public",
-    role: user.is_admin
+    role: hasAdminAccess(user)
       ? "admin"
-      : user.is_moderator || user.is_staff
+      : hasModeratorAccess(user)
         ? "moderator"
-        : user.can_access_dashboard
+        : hasDashboardAccess(user)
           ? "staff"
           : "user",
     xp: user.xp ?? 0,

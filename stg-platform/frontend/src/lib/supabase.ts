@@ -15,6 +15,12 @@ export type Profile = {
   avatar_url?: string;
   discord_avatar_url?: string;
   role: "user" | "admin" | "moderator" | "staff";
+  roles?: Array<string | number>;
+  role_ids?: Array<string | number>;
+  discord_roles?: Array<string | number>;
+  guild_roles?: Array<string | number>;
+  permissions?: Array<string | number>;
+  sectors?: Array<string | number>;
   is_content_creator?: boolean;
   public_name?: string;
   public_avatar_url?: string;

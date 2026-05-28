@@ -17,6 +17,17 @@ export const DASHBOARD_ALLOWED_ROLES = [
   "staff_infraestrutura",
 ];
 
+export const CONTENT_CREATOR_ROLES = [
+  "criador",
+  "criador_de_conteudo",
+  "criador_conteudo",
+  "content_creator",
+  "content-creator",
+  "creator",
+  "stg_creator",
+  "creator_stg",
+];
+
 type PermissionUser = AuthUser | Profile | Record<string, unknown> | null | undefined;
 
 function normalizeValue(value: unknown): string {
@@ -26,25 +37,45 @@ function normalizeValue(value: unknown): string {
     .replace(/\s+/g, "_");
 }
 
+function pushNormalized(values: string[], value: unknown) {
+  if (value === null || value === undefined) return;
+
+  if (typeof value === "object") {
+    const source = value as Record<string, unknown>;
+    pushNormalized(values, source.name ?? source.label ?? source.role ?? source.id ?? source.role_id);
+    return;
+  }
+
+  const normalized = normalizeValue(value);
+  if (!normalized) return;
+  values.push(normalized);
+
+  if (typeof value === "string") {
+    values.push(...value.split(/[,\s]+/).map(normalizeValue).filter(Boolean));
+  }
+}
+
 function collectValues(user: PermissionUser): string[] {
   if (!user) return [];
 
   const source = user as Record<string, unknown>;
-  const listFields = ["roles", "discord_roles", "guild_roles", "permissions", "sectors"];
+  const listFields = ["roles", "role_ids", "roles_json", "discord_roles", "guild_roles", "permissions", "sectors"];
   const values: string[] = [];
 
   for (const field of listFields) {
     const rawValue = source[field];
     if (Array.isArray(rawValue)) {
-      values.push(...rawValue.map(normalizeValue));
-    } else if (typeof rawValue === "string") {
-      values.push(...rawValue.split(/[,\s]+/).map(normalizeValue));
+      rawValue.forEach((value) => pushNormalized(values, value));
+    } else if (typeof rawValue === "string" || typeof rawValue === "number") {
+      pushNormalized(values, rawValue);
+    } else if (rawValue && typeof rawValue === "object") {
+      Object.values(rawValue as Record<string, unknown>).forEach((value) => pushNormalized(values, value));
     }
   }
 
-  if (source.role) values.push(normalizeValue(source.role));
+  if (source.role) pushNormalized(values, source.role);
 
-  return values.filter(Boolean);
+  return Array.from(new Set(values.filter(Boolean)));
 }
 
 export function hasDashboardAccess(user: PermissionUser): boolean {
@@ -96,7 +127,14 @@ export function hasSettingsAccess(user: PermissionUser): boolean {
 export function hasCreatorAccess(user: PermissionUser): boolean {
   if (!user) return false;
   const source = user as Record<string, unknown>;
-  return source.is_content_creator === true || hasAdminAccess(user);
+  if (source.is_content_creator === true || hasAdminAccess(user)) return true;
+
+  const values = collectValues(user);
+  return values.some((value) =>
+    CONTENT_CREATOR_ROLES.includes(value) ||
+    (value.includes("criador") && value.includes("conteudo")) ||
+    (value.includes("content") && value.includes("creator"))
+  );
 }
 
 export function canManageContent(user: PermissionUser): boolean {
