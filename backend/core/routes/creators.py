@@ -1,5 +1,6 @@
 """Content creator routes."""
 from datetime import datetime, timezone
+from urllib.parse import urlparse, urlunparse
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
@@ -13,6 +14,32 @@ from core.services.platforms.youtube import fetch_youtube_channel_profile
 
 router = APIRouter(tags=["creators"])
 settings = get_settings()
+
+def normalize_channel_identifier(value: str | None) -> str:
+    return str(value or "").strip().lower().lstrip("@")
+
+def normalize_channel_url(value: str | None) -> str:
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    try:
+        parsed = urlparse(raw)
+        netloc = parsed.netloc.lower().removeprefix("www.")
+        path = parsed.path.rstrip("/")
+        return urlunparse((parsed.scheme.lower(), netloc, path, "", "", "")).lower()
+    except Exception:
+        return raw.rstrip("/").lower()
+
+def is_same_creator_channel(left: CreatorChannel, right: CreatorChannel) -> bool:
+    if normalize_channel_identifier(left.platform) != normalize_channel_identifier(right.platform):
+        return False
+
+    pairs = (
+        (normalize_channel_identifier(left.channel_id), normalize_channel_identifier(right.channel_id)),
+        (normalize_channel_identifier(left.handle), normalize_channel_identifier(right.handle)),
+        (normalize_channel_url(left.channel_url), normalize_channel_url(right.channel_url)),
+    )
+    return any(a and b and a == b for a, b in pairs)
 
 def serialize_channel(channel: CreatorChannel) -> dict:
     return {
@@ -213,6 +240,34 @@ async def add_my_creator_channel(
     creator = get_or_create_my_creator(current_user, db)
     channel = CreatorChannel(creator_id=creator.id, **payload.model_dump())
     await sync_channel_public_profile(channel)
+
+    existing = next((item for item in creator.channels if is_same_creator_channel(item, channel)), None)
+    if existing:
+        for key, value in payload.model_dump(exclude_unset=True).items():
+            setattr(existing, key, value)
+        existing.channel_id = channel.channel_id or existing.channel_id
+        existing.channel_name = channel.channel_name or existing.channel_name
+        existing.handle = channel.handle or existing.handle
+        existing.description = channel.description or existing.description
+        existing.thumbnail_url = channel.thumbnail_url or existing.thumbnail_url
+        existing.subscriber_count = channel.subscriber_count if channel.subscriber_count is not None else existing.subscriber_count
+        existing.video_count = channel.video_count if channel.video_count is not None else existing.video_count
+        existing.view_count = channel.view_count if channel.view_count is not None else existing.view_count
+        existing.metadata_json = channel.metadata_json or existing.metadata_json
+        existing.last_checked_at = channel.last_checked_at or existing.last_checked_at
+        existing.is_active = True
+        existing.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(existing)
+        return serialize_channel(existing)
+
+    active_channel = next((item for item in creator.channels if item.is_active), None)
+    if active_channel:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Creator account already registered. Edit or remove the current account before adding another.",
+        )
+
     db.add(channel)
     db.commit()
     db.refresh(channel)

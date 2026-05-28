@@ -118,6 +118,34 @@ function formatCompactNumber(value?: number): string {
   return Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(value);
 }
 
+function normalizeChannelIdentifier(value?: string): string {
+  return String(value || "").trim().toLowerCase().replace(/^@/, "");
+}
+
+function normalizeChannelUrl(value?: string): string {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    url.hash = "";
+    url.search = "";
+    url.hostname = url.hostname.replace(/^www\./, "").toLowerCase();
+    url.pathname = url.pathname.replace(/\/+$/g, "");
+    return url.toString().replace(/\/+$/g, "").toLowerCase();
+  } catch {
+    return raw.replace(/\/+$/g, "").toLowerCase();
+  }
+}
+
+function isSameCreatorChannel(channel: CreatorChannel, payload: CreatorChannelPayload): boolean {
+  if (normalizeChannelIdentifier(channel.platform) !== normalizeChannelIdentifier(payload.platform)) return false;
+  return (
+    Boolean(channel.channel_id && payload.channel_id && normalizeChannelIdentifier(channel.channel_id) === normalizeChannelIdentifier(payload.channel_id)) ||
+    Boolean(channel.handle && payload.handle && normalizeChannelIdentifier(channel.handle) === normalizeChannelIdentifier(payload.handle)) ||
+    Boolean(channel.channel_url && payload.channel_url && normalizeChannelUrl(channel.channel_url) === normalizeChannelUrl(payload.channel_url))
+  );
+}
+
 function Corners({ size = 10, color = "rgba(168,85,247,0.7)" }: { size?: number; color?: string }) {
   const s = `${size}px`;
   const b = `1.5px solid ${color}`;
@@ -481,7 +509,8 @@ export function Profile() {
     : [];
   const primaryChannelName = primaryCreatorChannel?.channel_name || (primaryCreatorChannel ? getChannelLabel(primaryCreatorChannel) : "Nenhuma plataforma cadastrada");
   const primaryChannelAvatarUrl = primaryCreatorChannel?.thumbnail_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(primaryChannelName)}&background=111827&color=c084fc`;
-  const showCreatorChannelForm = !primaryCreatorChannel || Boolean(editingChannel);
+  const hasRegisteredCreatorChannel = Boolean(primaryCreatorChannel);
+  const showCreatorChannelForm = !loading && (!hasRegisteredCreatorChannel || Boolean(editingChannel));
 
   useEffect(() => {
     async function load() {
@@ -552,6 +581,17 @@ export function Profile() {
     event.preventDefault();
     const currentUser = user;
     if (!currentUser) return;
+    const duplicateChannel = !editingChannel && visibleCreatorProfile?.channels.find((channel) => isSameCreatorChannel(channel, channelForm));
+    if (duplicateChannel) {
+      setError("Esta conta de criador ja esta cadastrada. Use editar ou remova a conta atual antes de adicionar outra.");
+      setChannelForm(emptyChannel);
+      return;
+    }
+    if (!editingChannel && visibleCreatorProfile?.channels.some((channel) => channel.is_active)) {
+      setError("Voce ja possui uma conta de criador cadastrada. Remova a conta atual antes de adicionar outra.");
+      setChannelForm(emptyChannel);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
