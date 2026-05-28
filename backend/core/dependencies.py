@@ -157,6 +157,17 @@ async def require_dashboard_access(
         )
     return current_user
 
+async def require_content_creator(
+    current_user: AuthUser = Depends(get_current_user)
+) -> AuthUser:
+    """Require content creator access."""
+    if not (current_user.is_content_creator or current_user.is_admin):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Acesso restrito a criadores de conteúdo"
+        )
+    return current_user
+
 async def require_moderator(
     current_user: AuthUser = Depends(get_current_user)
 ) -> AuthUser:

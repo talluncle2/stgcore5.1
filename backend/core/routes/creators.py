@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from core.config import get_settings
 from core.database import get_db
-from core.dependencies import require_admin, require_dashboard_access
+from core.dependencies import require_admin, require_content_creator, require_dashboard_access
 from core.models import ContentCreator, CreatorChannel, CreatorContent, DiscordMember
 from core.schemas import AuthUser, ContentCreatorCreate, ContentCreatorUpdate, CreatorChannelCreate, CreatorChannelUpdate
 from core.services.content_checker import check_creator_content
@@ -83,6 +83,35 @@ def serialize_creator(creator: ContentCreator, include_content: bool = False) ->
         ]
     return data
 
+def get_or_create_my_creator(current_user: AuthUser, db: Session) -> ContentCreator:
+    discord_id = str(current_user.discord_id)
+    creator = db.query(ContentCreator).options(joinedload(ContentCreator.channels)).filter(
+        ContentCreator.discord_id == discord_id
+    ).first()
+    if creator:
+        if not creator.is_active:
+            creator.is_active = True
+        creator.display_name = creator.display_name or current_user.display_name or current_user.global_name or current_user.username
+        creator.username = creator.username or current_user.username or current_user.discord_username
+        creator.avatar_url = creator.avatar_url or current_user.avatar_url or current_user.discord_avatar_url
+        creator.updated_at = datetime.now(timezone.utc)
+        db.commit()
+        db.refresh(creator)
+        return creator
+
+    creator = ContentCreator(
+        discord_id=discord_id,
+        guild_id=str(settings.GUILD_ID) if settings.GUILD_ID else None,
+        display_name=current_user.display_name or current_user.global_name or current_user.username,
+        username=current_user.username or current_user.discord_username,
+        avatar_url=current_user.avatar_url or current_user.discord_avatar_url,
+        is_active=True,
+    )
+    db.add(creator)
+    db.commit()
+    db.refresh(creator)
+    return creator
+
 @router.get("/creators")
 async def get_creators(db: Session = Depends(get_db), limit: int = Query(50, ge=1, le=100)):
     creators = db.query(ContentCreator).options(joinedload(ContentCreator.channels)).filter(
@@ -112,6 +141,74 @@ async def get_latest_creator_content(db: Session = Depends(get_db), limit: int =
         CreatorContent.is_active == True
     ).order_by(desc(CreatorContent.published_at), desc(CreatorContent.created_at)).limit(limit).all()
     return {"content": [serialize_content(item) for item in content]}
+
+@router.get("/creators/me")
+async def get_my_creator(
+    current_user: AuthUser = Depends(require_content_creator),
+    db: Session = Depends(get_db),
+):
+    creator = get_or_create_my_creator(current_user, db)
+    return serialize_creator(creator, include_content=True)
+
+@router.post("/creators/me/register")
+async def register_my_creator(
+    current_user: AuthUser = Depends(require_content_creator),
+    db: Session = Depends(get_db),
+):
+    creator = get_or_create_my_creator(current_user, db)
+    return {"creator": serialize_creator(creator, include_content=True), "channels": [serialize_channel(channel) for channel in creator.channels]}
+
+@router.post("/creators/me/channels")
+async def add_my_creator_channel(
+    payload: CreatorChannelCreate,
+    current_user: AuthUser = Depends(require_content_creator),
+    db: Session = Depends(get_db),
+):
+    creator = get_or_create_my_creator(current_user, db)
+    channel = CreatorChannel(creator_id=creator.id, **payload.model_dump())
+    db.add(channel)
+    db.commit()
+    db.refresh(channel)
+    return serialize_channel(channel)
+
+@router.put("/creators/me/channels/{channel_id}")
+async def update_my_creator_channel(
+    channel_id: str,
+    payload: CreatorChannelUpdate,
+    current_user: AuthUser = Depends(require_content_creator),
+    db: Session = Depends(get_db),
+):
+    creator = get_or_create_my_creator(current_user, db)
+    channel = db.query(CreatorChannel).filter(
+        CreatorChannel.id == channel_id,
+        CreatorChannel.creator_id == creator.id,
+    ).first()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(channel, key, value)
+    channel.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(channel)
+    return serialize_channel(channel)
+
+@router.delete("/creators/me/channels/{channel_id}")
+async def disable_my_creator_channel(
+    channel_id: str,
+    current_user: AuthUser = Depends(require_content_creator),
+    db: Session = Depends(get_db),
+):
+    creator = get_or_create_my_creator(current_user, db)
+    channel = db.query(CreatorChannel).filter(
+        CreatorChannel.id == channel_id,
+        CreatorChannel.creator_id == creator.id,
+    ).first()
+    if not channel:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    channel.is_active = False
+    channel.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    return {"success": True}
 
 @router.get("/creators/{creator_id}")
 async def get_creator(creator_id: str, db: Session = Depends(get_db)):

@@ -87,7 +87,19 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "");
-      throw new ApiError(errorText || "Nao foi possivel sincronizar com a API.", response.status);
+      let message = errorText || "Nao foi possivel sincronizar com a API.";
+      if (errorText) {
+        try {
+          const parsed = JSON.parse(errorText) as { detail?: unknown; message?: unknown; error?: unknown };
+          const parsedMessage = parsed.detail ?? parsed.message ?? parsed.error;
+          if (typeof parsedMessage === "string") {
+            message = parsedMessage;
+          }
+        } catch {
+          // Keep the original response text when it is not JSON.
+        }
+      }
+      throw new ApiError(message, response.status);
     }
 
     if (response.status === 204) {
