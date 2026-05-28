@@ -1,32 +1,47 @@
 import { useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import { Radio, RefreshCw, Users, Video } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { CreatorCard } from "../components/creators/CreatorCard";
+import { CreatorBanner } from "../components/creators/CreatorBanner";
+import { CreatorPlatformBadge } from "../components/creators/CreatorPlatformBadge";
+import { ContentEmbedModal } from "../components/creators/ContentEmbedModal";
 import { LiveContentCard } from "../components/creators/LiveContentCard";
-import { getCreators, getLatestCreatorContent, getLiveCreators } from "../services/creatorsService";
+import { getCreatorById, getCreators, getFeaturedCreators, getLatestCreatorContent, getLiveCreators } from "../services/creatorsService";
 import { ContentCreator, CreatorContent } from "../types/api";
 
 export function Creators() {
+  const { creatorId } = useParams();
   const [creators, setCreators] = useState<ContentCreator[]>([]);
+  const [selectedCreator, setSelectedCreator] = useState<ContentCreator | null>(null);
+  const [featuredCreators, setFeaturedCreators] = useState<ContentCreator[]>([]);
   const [liveContent, setLiveContent] = useState<CreatorContent[]>([]);
   const [latestContent, setLatestContent] = useState<CreatorContent[]>([]);
+  const [selectedContent, setSelectedContent] = useState<CreatorContent | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [creatorData, liveData, latestData] = await Promise.all([
+      const [creatorData, featuredData, liveData, latestData] = await Promise.all([
         getCreators(),
+        getFeaturedCreators(),
         getLiveCreators(),
         getLatestCreatorContent(),
       ]);
       setCreators(creatorData);
+      setFeaturedCreators(featuredData);
       setLiveContent(liveData);
       setLatestContent(latestData);
+      if (creatorId) {
+        setSelectedCreator(await getCreatorById(creatorId));
+      } else {
+        setSelectedCreator(null);
+      }
       setLoading(false);
     }
     void load();
-  }, []);
+  }, [creatorId]);
 
   const liveByCreator = useMemo(() => {
     const map = new Map<string, CreatorContent>();
@@ -63,21 +78,56 @@ export function Creators() {
           </div>
         ) : (
           <>
+            {creatorId && selectedCreator && (
+              <section className="space-y-4">
+                <CreatorBanner creator={selectedCreator} liveContent={liveByCreator.get(selectedCreator.id)} />
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="stg-hud-panel p-5">
+                    <h2 className="text-xl font-black uppercase text-white">Bio publica</h2>
+                    <p className="mt-3 text-sm leading-6 text-[#94a3b8]">{selectedCreator.bio || "Este criador ainda nao cadastrou uma bio publica."}</p>
+                  </div>
+                  <div className="stg-hud-panel p-5">
+                    <h2 className="text-xl font-black uppercase text-white">Plataformas</h2>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {selectedCreator.channels.map((channel) => <CreatorPlatformBadge key={channel.id} platform={channel.platform} />)}
+                      {selectedCreator.channels.length === 0 && <p className="text-sm text-[#94a3b8]">Nenhuma plataforma publica cadastrada.</p>}
+                    </div>
+                  </div>
+                </div>
+              </section>
+            )}
+            {creatorId && !selectedCreator && (
+              <div className="stg-hud-panel p-6 text-[#94a3b8]">Perfil de criador aguardando retorno da API ou nao encontrado.</div>
+            )}
+
             <section className="space-y-4">
               <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-white">Ao vivo agora</h2>
               {liveContent.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                  {liveContent.map((content) => <LiveContentCard key={content.id} content={content} />)}
+                  {liveContent.map((content) => <LiveContentCard key={content.id} content={content} onWatch={setSelectedContent} />)}
                 </div>
               ) : (
-                <div className="stg-hud-panel p-6 text-[#94a3b8]">Nenhuma live ativa detectada. Exibindo videos recentes abaixo.</div>
+                <div className="stg-hud-panel p-6 text-[#94a3b8]">Nenhuma transmissão ao vivo no momento. Exibindo videos recentes abaixo.</div>
               )}
             </section>
 
             <section className="space-y-4">
-              <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-white">Ultimos videos</h2>
+              <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-white">Criadores STG em destaque</h2>
+              {featuredCreators.length > 0 ? (
+                <div className="grid gap-4">
+                  {featuredCreators.slice(0, 3).map((creator) => (
+                    <CreatorBanner key={creator.id} creator={creator} liveContent={liveByCreator.get(creator.id)} />
+                  ))}
+                </div>
+              ) : (
+                <div className="stg-hud-panel p-6 text-[#94a3b8]">Criadores em destaque aguardando curadoria da equipe STG.</div>
+              )}
+            </section>
+
+            <section className="space-y-4">
+              <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-white">Ultimos videos da comunidade</h2>
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {latestContent.slice(0, 6).map((content) => <LiveContentCard key={content.id} content={content} />)}
+                {latestContent.slice(0, 6).map((content) => <LiveContentCard key={content.id} content={content} onWatch={setSelectedContent} />)}
               </div>
               {latestContent.length === 0 && <div className="stg-hud-panel p-6 text-[#94a3b8]">Videos aguardando sincronizacao das plataformas.</div>}
             </section>
@@ -94,6 +144,7 @@ export function Creators() {
           </>
         )}
       </div>
+      <ContentEmbedModal content={selectedContent} onClose={() => setSelectedContent(null)} />
     </Layout>
   );
 }

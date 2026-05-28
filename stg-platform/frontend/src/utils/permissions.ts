@@ -93,6 +93,12 @@ export function hasSettingsAccess(user: PermissionUser): boolean {
   return hasDashboardAccess(user);
 }
 
+export function hasCreatorAccess(user: PermissionUser): boolean {
+  if (!user) return false;
+  const source = user as Record<string, unknown>;
+  return source.is_content_creator === true || hasAdminAccess(user);
+}
+
 export function canManageContent(user: PermissionUser): boolean {
   if (!user) return false;
   return hasDashboardAccess(user) || hasAdminAccess(user) || hasModeratorAccess(user);

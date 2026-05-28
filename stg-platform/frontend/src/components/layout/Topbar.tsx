@@ -167,9 +167,10 @@ export function Topbar() {
             <button
               type="button"
               onClick={loginWithDiscord}
-              className="tactical-edge flex items-center gap-2 bg-[#a855f7] px-4 py-2 text-sm font-black uppercase tracking-[0.08em] text-white transition-colors hover:bg-[#c084fc] glow-purple"
+              className="tactical-edge flex items-center gap-2 bg-[#a855f7] px-3 py-2 text-xs font-black uppercase tracking-[0.06em] text-white transition-colors hover:bg-[#c084fc] glow-purple sm:px-4 sm:text-sm sm:tracking-[0.08em]"
             >
-              Conectar-se
+              <span className="sm:hidden">Entrar</span>
+              <span className="hidden sm:inline">Conectar-se</span>
             </button>
           )}
           {isAuthenticated && <UserMenu />}

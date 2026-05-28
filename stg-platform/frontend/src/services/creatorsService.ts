@@ -1,5 +1,6 @@
 import { API_BASE_URL, authedApiRequest } from "./api";
 import { ContentCreator, ContentCreatorPayload, CreatorChannel, CreatorChannelPayload, CreatorContent } from "../types/api";
+import { assertSafePublicUrl, sanitizeOptionalUrl } from "../utils/safeUrl";
 
 async function publicRequest<T>(path: string, fallback: T): Promise<T> {
   if (!API_BASE_URL) return fallback;
@@ -28,6 +29,24 @@ function extractContent(data: unknown): CreatorContent[] {
   return [];
 }
 
+function extractCreator(data: unknown): ContentCreator | null {
+  if (!data) return null;
+  if (typeof data === "object" && "creator" in data) {
+    return ((data as { creator?: ContentCreator }).creator ?? null);
+  }
+  return data as ContentCreator;
+}
+
+function validateChannelPayload(data: CreatorChannelPayload): CreatorChannelPayload {
+  assertSafePublicUrl(data.channel_url, "URL do canal");
+  return {
+    ...data,
+    channel_url: sanitizeOptionalUrl(data.channel_url),
+    channel_id: data.channel_id?.trim() || undefined,
+    handle: data.handle?.trim() || undefined,
+  };
+}
+
 export async function getCreators(): Promise<ContentCreator[]> {
   return extractCreators(await publicRequest("/creators", { creators: [] }));
 }
@@ -45,7 +64,33 @@ export async function getLatestCreatorContent(): Promise<CreatorContent[]> {
 }
 
 export async function getCreatorById(id: string): Promise<ContentCreator | null> {
-  return publicRequest<ContentCreator | null>(`/creators/${id}`, null);
+  return extractCreator(await publicRequest<ContentCreator | { creator?: ContentCreator } | null>(`/creators/${id}`, null));
+}
+
+export async function getMyCreatorProfile(): Promise<ContentCreator | null> {
+  try {
+    return extractCreator(await authedApiRequest<ContentCreator | { creator?: ContentCreator }>("/creator/me"));
+  } catch {
+    return null;
+  }
+}
+
+export function addMyCreatorChannel(data: CreatorChannelPayload): Promise<CreatorChannel> {
+  return authedApiRequest("/creator/me/channels", {
+    method: "POST",
+    body: JSON.stringify(validateChannelPayload(data)),
+  });
+}
+
+export function updateMyCreatorChannel(id: string, data: CreatorChannelPayload): Promise<CreatorChannel> {
+  return authedApiRequest(`/creator/me/channels/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(validateChannelPayload(data)),
+  });
+}
+
+export function disableMyCreatorChannel(id: string): Promise<void> {
+  return authedApiRequest(`/creator/me/channels/${id}`, { method: "DELETE" });
 }
 
 export async function adminGetCreators(): Promise<{ creators: ContentCreator[]; can_manage: boolean }> {
@@ -73,11 +118,11 @@ export function adminSyncCreatorsFromDiscord(): Promise<{ success: boolean; sync
 }
 
 export function adminAddCreatorChannel(creatorId: string, data: CreatorChannelPayload): Promise<CreatorChannel> {
-  return authedApiRequest(`/admin/creators/${creatorId}/channels`, { method: "POST", body: JSON.stringify(data) });
+  return authedApiRequest(`/admin/creators/${creatorId}/channels`, { method: "POST", body: JSON.stringify(validateChannelPayload(data)) });
 }
 
 export function adminUpdateCreatorChannel(channelId: string, data: CreatorChannelPayload): Promise<CreatorChannel> {
-  return authedApiRequest(`/admin/creators/channels/${channelId}`, { method: "PUT", body: JSON.stringify(data) });
+  return authedApiRequest(`/admin/creators/channels/${channelId}`, { method: "PUT", body: JSON.stringify(validateChannelPayload(data)) });
 }
 
 export function adminDisableCreatorChannel(channelId: string): Promise<void> {

@@ -93,6 +93,16 @@ export interface AuthUser {
   is_moderator?: boolean;
   is_content_creator?: boolean;
   can_access_dashboard?: boolean;
+  public_name?: string;
+  public_avatar_url?: string;
+  public_banner_url?: string;
+  bio?: string;
+  public_email?: string;
+  location_optional?: string;
+  pronouns?: string;
+  sexual_orientation?: string;
+  sexual_orientation_visibility?: ProfileFieldVisibility;
+  profile_visibility?: ProfileVisibility;
   coins?: number;
   xp?: number;
   level?: number;
@@ -324,8 +334,10 @@ export interface AdminSettings {
   options?: Record<string, unknown>;
 }
 
-export type CreatorPlatform = "youtube" | "twitch" | "kick" | "tiktok";
+export type CreatorPlatform = "youtube" | "twitch" | "kick" | "tiktok" | "instagram" | "x" | "twitter";
 export type CreatorContentType = "video" | "live" | "short" | "clip";
+export type ProfileVisibility = "public" | "members" | "private";
+export type ProfileFieldVisibility = "public" | "private";
 
 export interface CreatorChannel {
   id: string;
@@ -336,6 +348,7 @@ export interface CreatorChannel {
   channel_name?: string;
   handle?: string;
   is_active: boolean;
+  status?: string;
   last_checked_at?: string;
   created_at?: string;
   updated_at?: string;
@@ -358,7 +371,7 @@ export interface CreatorContent {
   ended_at?: string;
   is_live: boolean;
   is_active: boolean;
-  creator?: Pick<ContentCreator, "id" | "display_name" | "username" | "avatar_url">;
+  creator?: Pick<ContentCreator, "id" | "display_name" | "username" | "avatar_url" | "public_name" | "public_avatar_url">;
 }
 
 export interface ContentCreator {
@@ -368,10 +381,23 @@ export interface ContentCreator {
   display_name?: string;
   username?: string;
   avatar_url?: string;
+  banner_url?: string;
+  public_name?: string;
+  public_avatar_url?: string;
+  public_banner_url?: string;
   bio?: string;
+  public_email?: string;
+  location_optional?: string;
+  pronouns?: string;
+  sexual_orientation?: string;
+  sexual_orientation_visibility?: ProfileFieldVisibility;
+  profile_visibility?: ProfileVisibility;
+  is_verified?: boolean;
   is_active: boolean;
   is_featured: boolean;
   sort_order: number;
+  last_checked_at?: string;
+  last_check_status?: string;
   created_at?: string;
   updated_at?: string;
   channels: CreatorChannel[];
@@ -380,3 +406,33 @@ export interface ContentCreator {
 
 export type ContentCreatorPayload = Partial<Omit<ContentCreator, "id" | "channels" | "latest_content" | "created_at" | "updated_at">>;
 export type CreatorChannelPayload = Partial<Omit<CreatorChannel, "id" | "creator_id" | "created_at" | "updated_at" | "last_checked_at">>;
+
+export interface PublicProfile {
+  id?: string | number;
+  discord_id?: string | number;
+  username?: string;
+  public_name?: string;
+  public_avatar_url?: string;
+  public_banner_url?: string;
+  bio?: string;
+  public_email?: string;
+  location_optional?: string;
+  pronouns?: string;
+  sexual_orientation?: string;
+  sexual_orientation_visibility?: ProfileFieldVisibility;
+  profile_visibility?: ProfileVisibility;
+}
+
+export type PublicProfilePayload = Pick<
+  PublicProfile,
+  | "public_name"
+  | "public_avatar_url"
+  | "public_banner_url"
+  | "bio"
+  | "public_email"
+  | "location_optional"
+  | "pronouns"
+  | "sexual_orientation"
+  | "sexual_orientation_visibility"
+  | "profile_visibility"
+>;

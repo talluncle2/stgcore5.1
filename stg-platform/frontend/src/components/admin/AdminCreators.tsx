@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw, Radio } from "lucide-react";
+import { AlertCircle, ExternalLink, RefreshCw, Radio } from "lucide-react";
 import { ContentCreator, CreatorChannelPayload, ContentCreatorPayload } from "../../types/api";
 import {
   adminAddCreatorChannel,
@@ -12,6 +12,7 @@ import {
 import { ContentEditorModal } from "./ContentEditorModal";
 import { SettingsActionMenu } from "../settings/SettingsActionMenu";
 import { SettingsStatusBadge } from "../settings/SettingsStatusBadge";
+import { CreatorPlatformBadge } from "../creators/CreatorPlatformBadge";
 
 const emptyCreator: ContentCreatorPayload = {
   discord_id: "",
@@ -36,10 +37,18 @@ export function AdminCreators() {
 
   const load = async () => {
     setLoading(true);
-    const data = await adminGetCreators();
-    setCreators(data.creators);
-    setCanManage(data.can_manage);
-    setLoading(false);
+    try {
+      const data = await adminGetCreators();
+      setCreators(data.creators);
+      setCanManage(data.can_manage);
+      setNotice(null);
+    } catch {
+      setCreators([]);
+      setCanManage(false);
+      setNotice("Recurso aguardando integração da API.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -76,16 +85,22 @@ export function AdminCreators() {
           <p className="mt-1 text-sm text-[#94a3b8]">Sincronize membros com is_content_creator e vincule canais por plataforma.</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <button disabled={!canManage} onClick={async () => { const result = await adminSyncCreatorsFromDiscord(); setNotice(`Sincronizados: ${result.synced}`); await load(); }} className="stg-button-secondary inline-flex items-center gap-2 px-4 py-2 text-xs disabled:opacity-50">
+          <button disabled={!canManage} onClick={async () => { try { const result = await adminSyncCreatorsFromDiscord(); setNotice(`Sincronizados: ${result.synced}`); await load(); } catch { setNotice("Sincronizacao aguardando integração da API."); } }} className="stg-button-secondary inline-flex items-center gap-2 px-4 py-2 text-xs disabled:opacity-50">
             <RefreshCw size={15} /> Sincronizar Discord
           </button>
-          <button disabled={!canManage} onClick={async () => { const result = await adminCheckCreatorContent(); setNotice(`Verificacao executada: ${JSON.stringify(result)}`); }} className="stg-button-primary inline-flex items-center gap-2 px-4 py-2 text-xs disabled:opacity-50">
+          <button disabled={!canManage} onClick={async () => { try { const result = await adminCheckCreatorContent(); setNotice(`Verificacao executada: ${JSON.stringify(result)}`); await load(); } catch { setNotice("Verificacao de lives/videos aguardando integração da API."); } }} className="stg-button-primary inline-flex items-center gap-2 px-4 py-2 text-xs disabled:opacity-50">
             <Radio size={15} /> Verificar agora
           </button>
         </div>
       </div>
 
       {notice && <div className="border border-[#84cc16]/35 bg-[#84cc16]/10 p-3 text-sm font-bold text-[#bef264]">{notice}</div>}
+      {!canManage && (
+        <div className="flex items-start gap-3 border border-[#f97316]/35 bg-[#f97316]/10 p-3 text-sm text-[#fed7aa]">
+          <AlertCircle size={18} className="mt-0.5 shrink-0" />
+          <p>Botoes administrativos ficam desativados sem permissao ou enquanto os endpoints administrativos nao estiverem integrados.</p>
+        </div>
+      )}
 
       {loading ? (
         <div className="stg-hud-panel p-8 text-center text-[#94a3b8]">Carregando criadores...</div>
@@ -101,8 +116,16 @@ export function AdminCreators() {
                   <div className="mt-2 flex flex-wrap gap-2">
                     {creator.is_featured && <SettingsStatusBadge tone="green">Destaque</SettingsStatusBadge>}
                     <SettingsStatusBadge tone={creator.is_active ? "purple" : "red"}>{creator.is_active ? "Ativo" : "Inativo"}</SettingsStatusBadge>
-                    {creator.channels.map((channel) => <SettingsStatusBadge key={channel.id} tone="blue">{channel.platform}</SettingsStatusBadge>)}
+                    {creator.channels.map((channel) => <CreatorPlatformBadge key={channel.id} platform={channel.platform} />)}
                   </div>
+                  <p className="mt-2 text-xs text-[#94a3b8]">
+                    Ultimo check: {creator.last_checked_at ? new Date(creator.last_checked_at).toLocaleString("pt-BR") : "N/A"} {creator.last_check_status ? `- ${creator.last_check_status}` : ""}
+                  </p>
+                  {creator.latest_content?.[0] && (
+                    <a href={creator.latest_content[0].content_url || "#"} target="_blank" rel="noreferrer" className="mt-2 inline-flex items-center gap-2 text-xs font-bold uppercase text-[#c084fc] hover:text-white">
+                      {creator.latest_content[0].is_live ? "Live mais recente" : "Video mais recente"} <ExternalLink size={13} />
+                    </a>
+                  )}
                 </div>
               </div>
               <SettingsActionMenu
@@ -132,6 +155,8 @@ export function AdminCreators() {
           <option value="twitch">Twitch</option>
           <option value="kick">Kick</option>
           <option value="tiktok">TikTok</option>
+          <option value="instagram">Instagram</option>
+          <option value="x">X/Twitter</option>
         </select>
         <input value={channelForm.channel_url || ""} onChange={(e) => setChannelForm({ ...channelForm, channel_url: e.target.value })} placeholder="URL do canal" className="w-full border border-[#a855f7]/25 bg-[#111827] px-3 py-2 text-white" />
         <input value={channelForm.channel_id || ""} onChange={(e) => setChannelForm({ ...channelForm, channel_id: e.target.value })} placeholder="ID do canal" className="w-full border border-[#a855f7]/25 bg-[#111827] px-3 py-2 text-white" />

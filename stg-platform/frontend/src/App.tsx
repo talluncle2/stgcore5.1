@@ -53,7 +53,9 @@ function App() {
           <Route path="/times" element={<Community />} />
           <Route path="/noticias" element={<News />} />
           <Route path="/criadores" element={<Creators />} />
+          <Route path="/criadores/:creatorId" element={<Creators />} />
           <Route path="/creators" element={<Creators />} />
+          <Route path="/creators/:creatorId" element={<Creators />} />
           <Route path="/loading-preview" element={<LoadingScreen />} />
           <Route
             path="/preview"

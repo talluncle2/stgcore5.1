@@ -4,36 +4,29 @@ import {
   ChevronRight,
   Coins,
   Eye,
+  ExternalLink,
   Instagram,
+  MessageCircle,
   Radio,
-  Search,
   Shield,
   Target,
   Trophy,
   Twitch,
-  User,
   Users,
   Youtube,
 } from "lucide-react";
 import { BrandLogo } from "../components/BrandLogo";
+import { CreatorCard } from "../components/creators/CreatorCard";
+import { ContentEmbedModal } from "../components/creators/ContentEmbedModal";
+import { LiveContentCard } from "../components/creators/LiveContentCard";
 import { HeroCarousel } from "../components/HeroCarousel";
-import { UserMenu } from "../components/layout/UserMenu";
+import { Topbar } from "../components/layout/Topbar";
 import { useAuth } from "../context/AuthContext";
 import { getFeaturedHeroItems } from "../services/featuredService";
 import { getActiveHomeContent } from "../services/homeService";
-import { getLatestCreatorContent, getLiveCreators } from "../services/creatorsService";
-import { FeaturedHeroItem, HomeContentItem, CreatorContent } from "../types/api";
+import { getFeaturedCreators, getLatestCreatorContent, getLiveCreators } from "../services/creatorsService";
+import { FeaturedHeroItem, HomeContentItem, CreatorContent, ContentCreator } from "../types/api";
 import { hasDashboardAccess } from "../utils/permissions";
-
-const navItems = [
-  { label: "INICIO", to: "/", active: true },
-  { label: "TORNEIOS", to: "/torneios" },
-  { label: "TIMES", to: "/comunidade" },
-  { label: "RANKING", to: "/ranking" },
-  { label: "NOTICIAS", to: "/noticias" },
-  { label: "CRIADORES", to: "/criadores" },
-  { label: "LOJA", to: "/loja" },
-];
 
 const modeCards = [
   { icon: Shield, title: "RANQUEADO", subtitle: "COMPETITIVO 5V5", to: "/ranking" },
@@ -52,19 +45,24 @@ const stats = [
   { icon: Radio, value: "24/7", label: "COBERTURA AO VIVO" },
 ];
 
+const discordInviteUrl = import.meta.env.VITE_DISCORD_INVITE_URL || "https://discord.gg/stg";
+
 export function Landing() {
-  const { user, profile, isAuthenticated, loading, loginWithDiscord } = useAuth();
+  const { user, profile, isAuthenticated, loginWithDiscord } = useAuth();
   const navigate = useNavigate();
   const identity = user ?? profile;
   const [featuredItems, setFeaturedItems] = useState<FeaturedHeroItem[]>([]);
   const [homeContent, setHomeContent] = useState<HomeContentItem | null>(null);
   const [creatorLive, setCreatorLive] = useState<CreatorContent[]>([]);
+  const [featuredCreators, setFeaturedCreators] = useState<ContentCreator[]>([]);
   const [creatorLatest, setCreatorLatest] = useState<CreatorContent[]>([]);
+  const [selectedContent, setSelectedContent] = useState<CreatorContent | null>(null);
 
   useEffect(() => {
     void getFeaturedHeroItems().then(setFeaturedItems);
     void getActiveHomeContent().then(setHomeContent);
     void getLiveCreators().then(setCreatorLive);
+    void getFeaturedCreators().then(setFeaturedCreators);
     void getLatestCreatorContent().then(setCreatorLatest);
   }, []);
 
@@ -82,43 +80,9 @@ export function Landing() {
       <div className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_70%_10%,rgba(126,34,206,0.22),transparent_30rem)]" />
       <div className="pointer-events-none fixed inset-0 z-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.82),transparent_40%,rgba(0,0,0,0.88))]" />
 
-      <header className="stg-topbar fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-black/78 backdrop-blur-xl">
-        <nav className="mx-auto flex h-[70px] max-w-[1840px] items-center px-5 md:px-9">
-          <Link to="/" className="stg-brand-panel flex h-full min-w-[250px] items-center gap-4 pr-10">
-            <BrandLogo imageClassName="h-14 w-16" />
-          </Link>
+      <Topbar />
 
-          <div className="hidden h-full flex-1 items-center justify-center gap-2 lg:flex">
-            {navItems.map((item) => (
-              <Link
-                key={item.label}
-                to={item.to}
-                className={`stg-nav-link ${item.active ? "stg-nav-link-active" : ""}`}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </div>
-
-          <div className="ml-auto flex items-center gap-4">
-            <button className="hidden text-white/80 transition hover:text-[#a855f7] md:block" aria-label="Buscar">
-              <Search size={21} />
-            </button>
-            {loading ? (
-              <div className="h-11 w-36 animate-pulse rounded bg-[#7c3aed]/20" />
-            ) : isAuthenticated || profile || user ? (
-              <UserMenu />
-            ) : (
-              <button type="button" onClick={loginWithDiscord} className="stg-login-button inline-flex items-center gap-3">
-                <User size={17} fill="currentColor" />
-                ENTRAR
-              </button>
-            )}
-          </div>
-        </nav>
-      </header>
-
-      <section className="relative z-10 min-h-[430px] overflow-hidden pt-[70px] lg:min-h-[410px]">
+      <section className="relative z-10 min-h-[430px] overflow-hidden pt-16 lg:min-h-[410px]">
         <div
           className="absolute inset-0 bg-cover bg-[68%_center]"
           style={{ backgroundImage: `url('${homeContent?.backgroundImageUrl || "/assets/premium-theme/IMG/COD-HP_Hero_Desktop_XL.webp"}')` }}
@@ -235,42 +199,55 @@ export function Landing() {
           <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
             <div>
               <p className="tactical-label mb-2">Comunidade em transmissao</p>
-              <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-white">
-                {creatorLive.length > 0 ? "Ao vivo agora" : "Ultimos videos dos criadores"}
-              </h2>
+              <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-white">Ao vivo agora</h2>
             </div>
             <Link to="/criadores" className="text-sm font-black uppercase text-[#c084fc] hover:text-white">
               Ver todos
             </Link>
           </div>
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {(creatorLive.length > 0 ? creatorLive : creatorLatest).slice(0, 3).map((content) => (
-              <a
-                key={content.id}
-                href={content.content_url || "/criadores"}
-                target={content.content_url ? "_blank" : undefined}
-                rel="noreferrer"
-                className={`stg-mode-card min-h-[140px] items-start ${content.is_live ? "border-[#ef4444]/55 shadow-[0_0_24px_rgba(239,68,68,0.18)]" : ""}`}
-              >
-                <div className="min-w-0">
-                  <span className={content.is_live ? "stg-badge-danger" : "stg-badge-purple"}>
-                    {content.is_live ? "AO VIVO" : content.platform}
-                  </span>
-                  <p className="mt-3 line-clamp-2 text-lg font-black uppercase tracking-[0.04em] text-white">
-                    {content.title || "Conteudo STG"}
-                  </p>
-                  <p className="mt-2 text-xs font-bold uppercase text-white/45">
-                    {content.creator?.display_name || content.creator?.username || "Criador STG"}
-                  </p>
-                </div>
-                <ChevronRight className="ml-auto mt-1 text-[#a855f7]" size={20} />
-              </a>
+            {creatorLive.slice(0, 3).map((content) => (
+              <LiveContentCard key={content.id} content={content} onWatch={setSelectedContent} />
             ))}
           </div>
-          {creatorLive.length === 0 && creatorLatest.length === 0 && (
-            <div className="stg-hud-panel p-5 text-sm text-[#94a3b8]">
-              Criadores e videos aguardando sincronizacao com a API.
+          {creatorLive.length === 0 && (
+            <div className="stg-hud-panel p-5 text-sm text-[#94a3b8]">Nenhuma transmissão ao vivo no momento.</div>
+          )}
+        </section>
+
+        <section className="stg-feature-shell mt-3 p-4 md:p-5">
+          <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="tactical-label mb-2">Squad de conteudo</p>
+              <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-white">Criadores STG em destaque</h2>
             </div>
+            <Link to="/criadores" className="text-sm font-black uppercase text-[#c084fc] hover:text-white">Ver perfis</Link>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {featuredCreators.slice(0, 3).map((creator) => (
+              <CreatorCard key={creator.id} creator={creator} liveContent={creatorLive.find((content) => content.creator_id === creator.id)} />
+            ))}
+          </div>
+          {featuredCreators.length === 0 && (
+            <div className="stg-hud-panel p-5 text-sm text-[#94a3b8]">Criadores em destaque aguardando curadoria da API.</div>
+          )}
+        </section>
+
+        <section className="stg-feature-shell mt-3 p-4 md:p-5">
+          <div className="mb-4 flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div>
+              <p className="tactical-label mb-2">Videos detectados</p>
+              <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-white">Ultimos videos da comunidade</h2>
+            </div>
+            <Link to="/criadores" className="text-sm font-black uppercase text-[#c084fc] hover:text-white">Abrir central</Link>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {creatorLatest.slice(0, 3).map((content) => (
+              <LiveContentCard key={content.id} content={content} onWatch={setSelectedContent} />
+            ))}
+          </div>
+          {creatorLatest.length === 0 && (
+            <div className="stg-hud-panel p-5 text-sm text-[#94a3b8]">Videos recentes aguardando integração da API.</div>
           )}
         </section>
 
@@ -286,18 +263,20 @@ export function Landing() {
               <Youtube />
               <Twitch />
             </div>
-            <form className="flex min-w-[300px] gap-2">
-              <input
-                className="h-10 min-w-0 flex-1 border border-white/10 bg-black/45 px-4 text-sm text-white outline-none placeholder:text-white/35 focus:border-[#a855f7]"
-                placeholder="Seu melhor e-mail"
-              />
-              <button className="stg-subscribe-button" type="button">
-                INSCREVER
-              </button>
-            </form>
+            <a
+              href={discordInviteUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="stg-subscribe-button inline-flex h-11 min-w-[230px] items-center justify-center gap-2 px-5 text-sm"
+            >
+              <MessageCircle size={17} />
+              ENTRAR NO DISCORD
+              <ExternalLink size={15} />
+            </a>
           </div>
         </footer>
       </section>
+      <ContentEmbedModal content={selectedContent} onClose={() => setSelectedContent(null)} />
     </main>
   );
 }

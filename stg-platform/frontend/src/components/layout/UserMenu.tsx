@@ -8,9 +8,10 @@ import {
   ShoppingCart,
   Trophy,
   User as UserIcon,
+  Video,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { hasAdminAccess, hasDashboardAccess, hasModeratorAccess, hasSettingsAccess } from "../../utils/permissions";
+import { hasAdminAccess, hasCreatorAccess, hasDashboardAccess, hasModeratorAccess, hasSettingsAccess } from "../../utils/permissions";
 
 export function UserMenu() {
   const { user, profile, signOut } = useAuth();
@@ -45,6 +46,7 @@ export function UserMenu() {
   const canOpenAdmin = hasAdminAccess(identity);
   const canOpenModeration = hasModeratorAccess(identity);
   const canOpenSettings = hasSettingsAccess(identity);
+  const canOpenCreatorAccounts = hasCreatorAccess(identity);
 
   const username =
     profile?.username ||
@@ -110,6 +112,31 @@ export function UserMenu() {
               <UserIcon size={16} />
               Perfil
             </button>
+            <button
+              onClick={() => handleNavigate("/profile?tab=publico")}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-bold uppercase tracking-[0.04em] text-[#f8fafc] transition-colors hover:bg-[#a855f7]/12 hover:text-[#a855f7]"
+            >
+              <UserIcon size={16} />
+              Perfil publico
+            </button>
+
+            <button
+              onClick={() => handleNavigate("/profile?tab=privacidade")}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-bold uppercase tracking-[0.04em] text-[#f8fafc] transition-colors hover:bg-[#a855f7]/12 hover:text-[#a855f7]"
+            >
+              <Settings size={16} />
+              Configuracoes de perfil
+            </button>
+
+            {canOpenCreatorAccounts && (
+              <button
+                onClick={() => handleNavigate("/profile?tab=criador")}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-black uppercase tracking-[0.04em] text-[#ef4444] transition-colors hover:bg-[#ef4444]/10"
+              >
+                <Video size={16} />
+                Contas de criador
+              </button>
+            )}
 
             {canOpenDashboard && (
               <>
@@ -136,11 +163,11 @@ export function UserMenu() {
 
             {canOpenSettings && (
               <button
-                onClick={() => handleNavigate("/configuracoes?tab=loja")}
+                onClick={() => handleNavigate(canOpenAdmin ? "/configuracoes?tab=criadores" : "/configuracoes?tab=loja")}
                 className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-black uppercase tracking-[0.04em] text-[#c084fc] transition-colors hover:bg-[#a855f7]/12"
               >
                 <Settings size={16} />
-                Configuracoes
+                {canOpenAdmin ? "Admin Criadores" : "Configuracoes"}
               </button>
             )}
 

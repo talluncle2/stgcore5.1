@@ -89,6 +89,17 @@ function profileFromUser(user: AuthUser | null): Profile | null {
     discord_id: user.discord_id ? String(user.discord_id) : undefined,
     avatar_url: user.avatar_url || user.discord_avatar_url || user.image_url,
     discord_avatar_url: user.discord_avatar_url || user.avatar_url,
+    is_content_creator: user.is_content_creator === true,
+    public_name: user.public_name,
+    public_avatar_url: user.public_avatar_url,
+    public_banner_url: user.public_banner_url,
+    bio: user.bio,
+    public_email: user.public_email,
+    location_optional: user.location_optional,
+    pronouns: user.pronouns,
+    sexual_orientation: user.sexual_orientation,
+    sexual_orientation_visibility: user.sexual_orientation_visibility || "private",
+    profile_visibility: user.profile_visibility || "public",
     role: user.is_admin
       ? "admin"
       : user.is_moderator || user.is_staff

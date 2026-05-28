@@ -15,6 +15,17 @@ export type Profile = {
   avatar_url?: string;
   discord_avatar_url?: string;
   role: "user" | "admin" | "moderator" | "staff";
+  is_content_creator?: boolean;
+  public_name?: string;
+  public_avatar_url?: string;
+  public_banner_url?: string;
+  bio?: string;
+  public_email?: string;
+  location_optional?: string;
+  pronouns?: string;
+  sexual_orientation?: string;
+  sexual_orientation_visibility?: "public" | "private";
+  profile_visibility?: "public" | "members" | "private";
   xp: number;
   level: number;
   coins: number;
