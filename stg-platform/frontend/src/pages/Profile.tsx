@@ -34,6 +34,7 @@ import {
   disableMyCreatorChannel,
   getMyCreatorProfile,
   registerMyCreatorProfile,
+  syncMyCreatorProfile,
   updateMyCreatorChannel,
 } from "../services/creatorsService";
 import { getMyPublicProfile, updateMyPublicProfile } from "../services/profileService";
@@ -42,7 +43,7 @@ import { hasAdminAccess, hasCreatorAccess } from "../utils/permissions";
 
 type ProfileTab = "resumo" | "publico" | "criador" | "privacidade";
 
-const platforms: CreatorPlatform[] = ["youtube", "twitch", "kick", "tiktok", "instagram", "x"];
+const platforms: CreatorPlatform[] = ["youtube", "twitch", "kick", "tiktok"];
 const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const platformColors: Record<string, string> = {
@@ -116,6 +117,24 @@ function getChannelLabel(channel: CreatorChannel): string {
 function formatCompactNumber(value?: number): string {
   if (value === undefined || value === null) return "N/A";
   return Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(value);
+}
+
+function getChannelSyncStatus(channel?: CreatorChannel | null): string {
+  if (!channel) return "pending";
+  const metadata = channel.metadata_json || {};
+  const status = metadata.content_sync_status || metadata.profile_sync_status;
+  if (typeof status === "string" && status.trim()) return status.toLowerCase();
+  return channel.last_checked_at ? "ok" : "pending";
+}
+
+function getChannelSyncLabel(channel?: CreatorChannel | null): string {
+  const status = getChannelSyncStatus(channel);
+  if (status === "ok") return "Sincronizado";
+  if (status === "not_configured") return "API nao configurada";
+  if (status === "not_implemented") return "Nao implementado";
+  if (status === "not_found") return "Canal nao encontrado";
+  if (status === "error") return "Erro de sync";
+  return "Pendente";
 }
 
 function normalizeChannelIdentifier(value?: string): string {
@@ -494,6 +513,8 @@ export function Profile() {
   const [editingChannel, setEditingChannel] = useState<CreatorChannel | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncingCreator, setSyncingCreator] = useState(false);
+  const [creatorApiError, setCreatorApiError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -502,39 +523,58 @@ export function Profile() {
   const isAdmin = hasAdminAccess(identity);
   const username = profile?.username || user?.display_name || user?.username || user?.discord_username || "Operador";
   const avatarUrl = publicForm.public_avatar_url || profile?.avatar_url || user?.avatar_url || user?.discord_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=a855f7&color=fff`;
-  const visibleCreatorProfile = user ? (creatorProfile || createLocalCreatorProfile(user)) : null;
+  const visibleCreatorProfile = user ? (creatorProfile || (!creatorApiError && canManageCreator ? createLocalCreatorProfile(user) : null)) : null;
   const primaryCreatorChannel = visibleCreatorProfile?.channels.find((channel) => channel.is_active) || visibleCreatorProfile?.channels[0] || null;
   const primaryChannelContent = primaryCreatorChannel
     ? (visibleCreatorProfile?.latest_content || visibleCreatorProfile?.latest_contents || []).filter((content) => content.channel_id === primaryCreatorChannel.id).slice(0, 3)
     : [];
   const primaryChannelName = primaryCreatorChannel?.channel_name || (primaryCreatorChannel ? getChannelLabel(primaryCreatorChannel) : "Nenhuma plataforma cadastrada");
   const primaryChannelAvatarUrl = primaryCreatorChannel?.thumbnail_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(primaryChannelName)}&background=111827&color=c084fc`;
+  const primaryChannelSyncStatus = getChannelSyncStatus(primaryCreatorChannel);
+  const primaryChannelSyncLabel = getChannelSyncLabel(primaryCreatorChannel);
   const hasRegisteredCreatorChannel = Boolean(primaryCreatorChannel);
-  const showCreatorChannelForm = !loading && (!hasRegisteredCreatorChannel || Boolean(editingChannel));
+  const showCreatorChannelForm = !loading && !creatorApiError && (!hasRegisteredCreatorChannel || Boolean(editingChannel));
 
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [publicProfile, creator] = await Promise.all([
-        getMyPublicProfile(),
-        canManageCreator ? getMyCreatorProfile() : Promise.resolve(null),
-      ]);
-      const registeredCreator = !creator && canManageCreator ? await registerMyCreatorProfile() : null;
-      setPublicForm({
-        ...emptyProfile,
-        public_name: publicProfile?.public_name || user?.public_name || username,
-        public_avatar_url: publicProfile?.public_avatar_url || user?.public_avatar_url || "",
-        public_banner_url: publicProfile?.public_banner_url || user?.public_banner_url || "",
-        bio: publicProfile?.bio || user?.bio || "",
-        public_email: publicProfile?.public_email || user?.public_email || "",
-        location_optional: publicProfile?.location_optional || user?.location_optional || "",
-        pronouns: publicProfile?.pronouns || user?.pronouns || "",
-        sexual_orientation: publicProfile?.sexual_orientation || user?.sexual_orientation || "",
-        sexual_orientation_visibility: publicProfile?.sexual_orientation_visibility || user?.sexual_orientation_visibility || "private",
-        profile_visibility: publicProfile?.profile_visibility || user?.profile_visibility || "public",
-      });
-      setCreatorProfile(creator || registeredCreator?.creator || null);
-      setLoading(false);
+      setCreatorApiError(null);
+      try {
+        const publicProfile = await getMyPublicProfile();
+        let creator: ContentCreator | null = null;
+
+        if (canManageCreator) {
+          try {
+            creator = await getMyCreatorProfile();
+            if (!creator) {
+              const registeredCreator = await registerMyCreatorProfile();
+              creator = registeredCreator?.creator ?? null;
+            }
+            if (!creator) {
+              setCreatorApiError("A API de criadores nao retornou o perfil do usuario autenticado.");
+            }
+          } catch (err) {
+            setCreatorApiError(err instanceof Error ? err.message : "Nao foi possivel conectar a API de criadores.");
+          }
+        }
+
+        setPublicForm({
+          ...emptyProfile,
+          public_name: publicProfile?.public_name || user?.public_name || username,
+          public_avatar_url: publicProfile?.public_avatar_url || user?.public_avatar_url || "",
+          public_banner_url: publicProfile?.public_banner_url || user?.public_banner_url || "",
+          bio: publicProfile?.bio || user?.bio || "",
+          public_email: publicProfile?.public_email || user?.public_email || "",
+          location_optional: publicProfile?.location_optional || user?.location_optional || "",
+          pronouns: publicProfile?.pronouns || user?.pronouns || "",
+          sexual_orientation: publicProfile?.sexual_orientation || user?.sexual_orientation || "",
+          sexual_orientation_visibility: publicProfile?.sexual_orientation_visibility || user?.sexual_orientation_visibility || "private",
+          profile_visibility: publicProfile?.profile_visibility || user?.profile_visibility || "public",
+        });
+        setCreatorProfile(creator);
+      } finally {
+        setLoading(false);
+      }
     }
     void load();
   }, [canManageCreator, user, username]);
@@ -574,6 +614,25 @@ export function Profile() {
       setError(err instanceof Error ? err.message : "Nao foi possivel salvar o perfil publico.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function syncCreatorProfile() {
+    setSyncingCreator(true);
+    setError(null);
+    setCreatorApiError(null);
+    try {
+      const syncedCreator = await syncMyCreatorProfile();
+      if (syncedCreator) {
+        setCreatorProfile(syncedCreator);
+      }
+      setNotice("Dados reais da plataforma sincronizados.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Nao foi possivel sincronizar com a API de criadores.";
+      setCreatorApiError(message);
+      setError(message);
+    } finally {
+      setSyncingCreator(false);
     }
   }
 
@@ -618,7 +677,7 @@ export function Profile() {
       }
       setChannelForm(emptyChannel);
       setEditingChannel(null);
-      const refreshedCreator = await getMyCreatorProfile();
+      const refreshedCreator = await syncMyCreatorProfile().catch(() => getMyCreatorProfile());
       if (refreshedCreator) {
         setCreatorProfile(refreshedCreator);
       }
@@ -639,7 +698,7 @@ export function Profile() {
         ...current,
         channels: current.channels.filter((item) => item.id !== channel.id),
       } : current);
-      const refreshedCreator = await getMyCreatorProfile();
+      const refreshedCreator = await getMyCreatorProfile().catch(() => null);
       if (refreshedCreator) {
         setCreatorProfile(refreshedCreator);
       }
@@ -929,6 +988,23 @@ export function Profile() {
 
         {activeTab === "criador" && canManageCreator && (
           <section className="space-y-5">
+            {creatorApiError && (
+              <HudPanel>
+                <div className="flex flex-col gap-3 p-5 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="mt-0.5 shrink-0 text-red-400" size={16} />
+                    <div>
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-300">API de criadores indisponivel</p>
+                      <p className="mt-1 text-sm text-slate-400">{creatorApiError}</p>
+                    </div>
+                  </div>
+                  <button type="button" onClick={() => void syncCreatorProfile()} disabled={syncingCreator} className="inline-flex items-center justify-center gap-2 border border-purple-500/30 bg-purple-500/10 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-purple-200 disabled:opacity-50">
+                    <RefreshCw className={syncingCreator ? "animate-spin" : ""} size={13} /> Tentar novamente
+                  </button>
+                </div>
+              </HudPanel>
+            )}
+
             {showCreatorChannelForm && (
               <form onSubmit={saveChannel}>
                 <HudPanel>
@@ -963,9 +1039,16 @@ export function Profile() {
                 >
                   <Scanlines opacity={0.05} />
                   <div aria-hidden className="pointer-events-none absolute inset-0 opacity-[0.03]" style={{ backgroundImage: "linear-gradient(rgba(168,85,247,1) 1px, transparent 1px), linear-gradient(90deg, rgba(168,85,247,1) 1px, transparent 1px)", backgroundSize: "40px 40px" }} />
-                  <div className="absolute right-5 top-4 text-right opacity-25">
-                    <p className="font-mono text-[9px] font-bold uppercase tracking-[0.25em] text-purple-300">STG // CREATOR INTEL</p>
-                    <p className="font-mono text-[9px] text-purple-400">SYNC {primaryCreatorChannel?.last_checked_at ? `✓ ${new Date(primaryCreatorChannel.last_checked_at).toLocaleDateString("pt-BR")}` : "PENDENTE"}</p>
+                  <div className="absolute right-5 top-4 flex flex-col items-end gap-2 text-right">
+                    <div className="opacity-45">
+                      <p className="font-mono text-[9px] font-bold uppercase tracking-[0.25em] text-purple-300">STG // CREATOR INTEL</p>
+                      <p className="font-mono text-[9px] text-purple-400">SYNC {primaryCreatorChannel?.last_checked_at ? `OK ${new Date(primaryCreatorChannel.last_checked_at).toLocaleDateString("pt-BR")}` : "PENDENTE"}</p>
+                    </div>
+                    {primaryCreatorChannel && (
+                      <button type="button" onClick={() => void syncCreatorProfile()} disabled={syncingCreator || saving} className="inline-flex items-center gap-1.5 border border-purple-500/25 bg-black/45 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-purple-200 backdrop-blur transition-colors hover:border-purple-400/50 hover:text-white disabled:opacity-50" title="Sincronizar dados reais da plataforma cadastrada">
+                        <RefreshCw className={syncingCreator ? "animate-spin" : ""} size={11} /> Sincronizar
+                      </button>
+                    )}
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 flex flex-col justify-end gap-5 p-5 md:flex-row md:items-end md:justify-between">
                     <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
@@ -983,9 +1066,9 @@ export function Profile() {
                           {primaryCreatorChannel && <PlatformBadge platform={primaryCreatorChannel.platform} />}
                           <span className="border border-purple-500/35 bg-purple-500/12 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-purple-300">{visibleCreatorProfile.channels.length} Plataformas</span>
                           {primaryCreatorChannel?.is_active && (
-                            <span className="flex items-center gap-1.5 border border-green-500/35 bg-green-500/10 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-green-400">
-                              <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-60" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-green-400" /></span>
-                              Sincronizado
+                            <span className={`flex items-center gap-1.5 border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${primaryChannelSyncStatus === "ok" ? "border-green-500/35 bg-green-500/10 text-green-400" : "border-amber-500/35 bg-amber-500/10 text-amber-300"}`}>
+                              <span className="relative flex h-1.5 w-1.5"><span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${primaryChannelSyncStatus === "ok" ? "bg-green-400" : "bg-amber-300"}`} /></span>
+                              {primaryChannelSyncLabel}
                             </span>
                           )}
                         </div>

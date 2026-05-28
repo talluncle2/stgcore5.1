@@ -87,6 +87,23 @@ python run.py
 - `GET /admin/discord/events` - Get events
 - `GET /admin/discord/stats` - Get Discord statistics
 
+### Creators
+- `GET /creators/latest` - Latest synced creator videos/lives
+- `GET /creators/live` - Currently synced live content
+- `GET /creators/me` - Current authenticated creator profile
+- `POST /creators/me/channels` - Register one creator platform account
+- `POST /creators/me/sync` - Force profile/content sync for the authenticated creator
+- `POST /internal/creators/check-content` - Internal scheduled sync using `X-Internal-Sync-Key` or `X-Bot-API-Key`
+
+Creator sync uses server-side platform APIs. Configure these secrets in Replit:
+
+```env
+YOUTUBE_API_KEY=...
+TWITCH_CLIENT_ID=...
+TWITCH_CLIENT_SECRET=...
+CORS_ORIGINS=https://seu-frontend.com
+```
+
 ## Database Tables
 
 See `../supabase/migrations/20260527000001_create_discord_tables.sql` for schema:

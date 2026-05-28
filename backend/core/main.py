@@ -41,15 +41,20 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+def get_cors_origins() -> list[str]:
+    origins = [
         "http://localhost:3000",
         "http://localhost:5173",
         "https://stg-warzone.vercel.app",
         settings.FRONTEND_URL,
-    ],
+        *settings.CORS_ORIGINS,
+    ]
+    return list(dict.fromkeys(origin for origin in origins if origin))
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_cors_origins(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

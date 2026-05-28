@@ -28,6 +28,7 @@ VITE_REQUIRE_AUTH=false
 
 Nao coloque secrets no frontend. Tokens e chaves de backend nao pertencem a este projeto.
 Sem `VITE_API_BASE_URL`, o frontend usa apenas caminhos relativos e os dados administrativos caem no fallback local isolado quando a API nao responde.
+O sistema de criadores nao usa fallback local para cadastro/sincronia: ele exige a API Replit ativa em `VITE_API_BASE_URL`.
 
 ## Deploy na Vercel
 
@@ -60,6 +61,19 @@ VITE_REQUIRE_AUTH=false
 ## Observacao
 
 O frontend nao contem backend, bot ou API. A API e o bot rodam no Replit. O frontend consome apenas a API configurada por `VITE_API_BASE_URL`.
+
+## Criadores
+
+O cadastro em `/perfil?tab=criador` chama a API FastAPI hospedada no Replit. A API sincroniza dados publicos reais da plataforma cadastrada e grava o resultado em `creator_channels` e `creator_content`.
+
+Variaveis necessarias no backend/Replit:
+
+```env
+YOUTUBE_API_KEY=...
+TWITCH_CLIENT_ID=...
+TWITCH_CLIENT_SECRET=...
+CORS_ORIGINS=https://seu-frontend.com
+```
 
 ## Paginas de conteudo
 

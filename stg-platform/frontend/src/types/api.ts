@@ -334,7 +334,7 @@ export interface AdminSettings {
   options?: Record<string, unknown>;
 }
 
-export type CreatorPlatform = "youtube" | "twitch" | "kick" | "tiktok" | "instagram" | "x" | "twitter";
+export type CreatorPlatform = "youtube" | "twitch" | "kick" | "tiktok";
 export type CreatorContentType = "video" | "live" | "short" | "clip";
 export type ProfileVisibility = "public" | "members" | "private";
 export type ProfileFieldVisibility = "public" | "private";
@@ -421,6 +421,13 @@ export interface MyCreatorResponse {
   creator?: ContentCreator | null;
   channels?: CreatorChannel[];
   profile?: PublicProfile | null;
+}
+
+export interface MyCreatorSyncResponse {
+  success?: boolean;
+  summary?: Record<string, unknown>;
+  creator?: ContentCreator | null;
+  channels?: CreatorChannel[];
 }
 
 export interface PublicProfile {

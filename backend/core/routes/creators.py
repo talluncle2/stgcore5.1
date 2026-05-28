@@ -1,5 +1,5 @@
 """Content creator routes."""
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse, urlunparse
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
@@ -9,8 +9,7 @@ from core.database import get_db
 from core.dependencies import require_admin, require_content_creator, require_dashboard_access
 from core.models import ContentCreator, CreatorChannel, CreatorContent, DiscordMember
 from core.schemas import AuthUser, ContentCreatorCreate, ContentCreatorUpdate, CreatorChannelCreate, CreatorChannelUpdate
-from core.services.content_checker import check_creator_content
-from core.services.platforms.youtube import fetch_youtube_channel_profile
+from core.services.content_checker import check_creator_content, sync_channel_public_profile, sync_creator_channel, sync_creator_content
 
 router = APIRouter(tags=["creators"])
 settings = get_settings()
@@ -146,36 +145,21 @@ def get_or_create_my_creator(current_user: AuthUser, db: Session) -> ContentCrea
     db.refresh(creator)
     return creator
 
-async def sync_channel_public_profile(channel: CreatorChannel) -> None:
-    platform = str(channel.platform).lower()
-    if platform != "youtube":
-        return
+def should_auto_sync_channel(channel: CreatorChannel) -> bool:
+    if not channel.is_active:
+        return False
+    if not channel.last_checked_at:
+        return True
+    last_checked_at = channel.last_checked_at
+    if last_checked_at.tzinfo is None:
+        last_checked_at = last_checked_at.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) - last_checked_at > timedelta(minutes=30)
 
-    result = await fetch_youtube_channel_profile(channel)
-    if result.get("status") != "ok":
-        channel.metadata_json = {
-            **(channel.metadata_json or {}),
-            "profile_sync_status": result.get("status"),
-            "profile_sync_message": result.get("message"),
-        }
-        return
-
-    for key in (
-        "channel_id",
-        "channel_name",
-        "handle",
-        "description",
-        "thumbnail_url",
-        "subscriber_count",
-        "video_count",
-        "view_count",
-        "channel_url",
-        "metadata_json",
-    ):
-        value = result.get(key)
-        if value is not None:
-            setattr(channel, key, value)
-    channel.updated_at = datetime.now(timezone.utc)
+async def auto_sync_creator_channels(db: Session, creator: ContentCreator) -> None:
+    for channel in creator.channels:
+        if should_auto_sync_channel(channel):
+            await sync_creator_channel(db, channel)
+    db.commit()
 
 @router.get("/creators")
 async def get_creators(db: Session = Depends(get_db), limit: int = Query(50, ge=1, le=100)):
@@ -213,9 +197,7 @@ async def get_my_creator(
     db: Session = Depends(get_db),
 ):
     creator = get_or_create_my_creator(current_user, db)
-    for channel in creator.channels:
-        await sync_channel_public_profile(channel)
-    db.commit()
+    await auto_sync_creator_channels(db, creator)
     db.refresh(creator)
     return serialize_creator(creator, include_content=True)
 
@@ -225,11 +207,19 @@ async def register_my_creator(
     db: Session = Depends(get_db),
 ):
     creator = get_or_create_my_creator(current_user, db)
-    for channel in creator.channels:
-        await sync_channel_public_profile(channel)
-    db.commit()
+    await auto_sync_creator_channels(db, creator)
     db.refresh(creator)
     return {"creator": serialize_creator(creator, include_content=True), "channels": [serialize_channel(channel) for channel in creator.channels]}
+
+@router.post("/creators/me/sync")
+async def sync_my_creator_profile(
+    current_user: AuthUser = Depends(require_content_creator),
+    db: Session = Depends(get_db),
+):
+    creator = get_or_create_my_creator(current_user, db)
+    summary = await sync_creator_content(db, creator)
+    db.refresh(creator)
+    return {"success": True, "summary": summary, "creator": serialize_creator(creator, include_content=True)}
 
 @router.post("/creators/me/channels")
 async def add_my_creator_channel(
@@ -257,6 +247,7 @@ async def add_my_creator_channel(
         existing.last_checked_at = channel.last_checked_at or existing.last_checked_at
         existing.is_active = True
         existing.updated_at = datetime.now(timezone.utc)
+        await sync_creator_channel(db, existing, sync_profile=False)
         db.commit()
         db.refresh(existing)
         return serialize_channel(existing)
@@ -269,6 +260,8 @@ async def add_my_creator_channel(
         )
 
     db.add(channel)
+    db.flush()
+    await sync_creator_channel(db, channel, sync_profile=False)
     db.commit()
     db.refresh(channel)
     return serialize_channel(channel)
@@ -290,6 +283,7 @@ async def update_my_creator_channel(
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(channel, key, value)
     await sync_channel_public_profile(channel)
+    await sync_creator_channel(db, channel, sync_profile=False)
     channel.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(channel)
@@ -386,6 +380,8 @@ async def admin_add_channel(creator_id: str, payload: CreatorChannelCreate, curr
     channel = CreatorChannel(creator_id=creator.id, **payload.model_dump())
     await sync_channel_public_profile(channel)
     db.add(channel)
+    db.flush()
+    await sync_creator_channel(db, channel, sync_profile=False)
     db.commit()
     db.refresh(channel)
     return serialize_channel(channel)
@@ -398,6 +394,7 @@ async def admin_update_channel(channel_id: str, payload: CreatorChannelUpdate, c
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(channel, key, value)
     await sync_channel_public_profile(channel)
+    await sync_creator_channel(db, channel, sync_profile=False)
     channel.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(channel)

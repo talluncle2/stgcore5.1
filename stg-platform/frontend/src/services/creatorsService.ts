@@ -1,5 +1,5 @@
 import { API_BASE_URL, authedApiRequest } from "./api";
-import { ContentCreator, ContentCreatorPayload, CreatorChannel, CreatorChannelPayload, CreatorContent, MyCreatorResponse } from "../types/api";
+import { ContentCreator, ContentCreatorPayload, CreatorChannel, CreatorChannelPayload, CreatorContent, MyCreatorResponse, MyCreatorSyncResponse } from "../types/api";
 import { assertSafePublicUrl, sanitizeOptionalUrl } from "../utils/safeUrl";
 
 async function publicRequest<T>(path: string, fallback: T): Promise<T> {
@@ -139,19 +139,16 @@ export async function getCreatorById(id: string): Promise<ContentCreator | null>
 }
 
 export async function getMyCreatorProfile(): Promise<ContentCreator | null> {
-  try {
-    return extractCreator(await authedApiRequest<ContentCreator | MyCreatorResponse>("/creators/me"));
-  } catch {
-    return null;
-  }
+  return extractCreator(await authedApiRequest<ContentCreator | MyCreatorResponse>("/creators/me"));
 }
 
 export async function registerMyCreatorProfile(): Promise<MyCreatorResponse | null> {
-  try {
-    return await authedApiRequest<MyCreatorResponse>("/creators/me/register", { method: "POST" });
-  } catch {
-    return null;
-  }
+  return await authedApiRequest<MyCreatorResponse>("/creators/me/register", { method: "POST" });
+}
+
+export async function syncMyCreatorProfile(): Promise<ContentCreator | null> {
+  const response = await authedApiRequest<MyCreatorSyncResponse>("/creators/me/sync", { method: "POST" });
+  return extractCreator(response);
 }
 
 export function addMyCreatorChannel(data: CreatorChannelPayload): Promise<CreatorChannel> {

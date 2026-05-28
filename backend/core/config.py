@@ -35,6 +35,7 @@ class Settings:
     # URLs
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:3000")
     API_BASE_URL: str = os.getenv("API_BASE_URL", "http://localhost:8000")
+    CORS_ORIGINS: list = [origin.strip() for origin in os.getenv("CORS_ORIGINS", "").split(",") if origin.strip()]
     
     # Environment
     DEBUG: bool = os.getenv("DEBUG", "false").lower() == "true"

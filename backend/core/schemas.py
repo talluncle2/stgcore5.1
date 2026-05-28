@@ -1,6 +1,6 @@
 """Pydantic Schemas for API Validation"""
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
 
 # Auth Schemas
@@ -217,8 +217,10 @@ class ErrorResponse(BaseModel):
     error: str
     details: Optional[Dict[str, Any]] = None
 
+CreatorPlatform = Literal["youtube", "twitch", "kick", "tiktok"]
+
 class CreatorChannelBase(BaseModel):
-    platform: str
+    platform: CreatorPlatform
     channel_id: Optional[str] = None
     channel_url: Optional[str] = None
     channel_name: Optional[str] = None
@@ -235,7 +237,7 @@ class CreatorChannelCreate(CreatorChannelBase):
     pass
 
 class CreatorChannelUpdate(BaseModel):
-    platform: Optional[str] = None
+    platform: Optional[CreatorPlatform] = None
     channel_id: Optional[str] = None
     channel_url: Optional[str] = None
     channel_name: Optional[str] = None
