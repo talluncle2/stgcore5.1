@@ -1,14 +1,18 @@
 import { FormEvent, useEffect, useMemo, useState, type ElementType, type ReactNode } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
+  Activity,
+  AlertTriangle,
   AtSign,
   CalendarDays,
   ChevronLeft,
   ChevronRight,
   Crosshair,
   ExternalLink,
+  Eye,
   EyeOff,
   Flame,
+  ImageIcon,
   Link as LinkIcon,
   Lock,
   Play,
@@ -17,12 +21,13 @@ import {
   RefreshCw,
   Save,
   Shield,
+  Sword,
   Trash2,
+  TrendingUp,
   User as UserIcon,
   Video,
 } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
-import { CreatorPlatformBadge } from "../components/creators/CreatorPlatformBadge";
 import { useAuth } from "../context/AuthContext";
 import {
   addMyCreatorChannel,
@@ -169,6 +174,26 @@ function HudPanel({ children, className = "", accent = false }: { children: Reac
   );
 }
 
+function StatCard({ label, value, icon: Icon, sub }: { label: string; value: string | number; icon: ElementType; sub?: string }) {
+  return (
+    <div
+      className="relative overflow-hidden border border-purple-500/20 bg-[#08090e] p-5"
+      style={{ boxShadow: "0 0 30px rgba(0,0,0,0.6), 0 0 0 1px rgba(168,85,247,0.04) inset" }}
+    >
+      <Corners size={8} />
+      <div aria-hidden className="pointer-events-none absolute -right-4 -top-4 h-20 w-20 rounded-full opacity-10" style={{ background: "radial-gradient(circle, #a855f7 0%, transparent 70%)" }} />
+      <div className="mb-4 flex items-center gap-2">
+        <div className="flex h-7 w-7 items-center justify-center border border-purple-500/30 bg-purple-500/10">
+          <Icon size={13} className="text-purple-400" />
+        </div>
+        <p className="text-[9px] font-black uppercase tracking-[0.18em] text-purple-400/80">{label}</p>
+      </div>
+      <p className="break-all font-mono text-2xl font-black text-white" style={{ textShadow: "0 0 20px rgba(168,85,247,0.3)" }}>{value}</p>
+      {sub && <p className="mt-1 text-[10px] font-bold text-slate-600">{sub}</p>}
+    </div>
+  );
+}
+
 function TacticalInput({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
   return (
     <label className="block">
@@ -220,6 +245,41 @@ function TacticalSelect({ label, value, onChange, children }: { label: string; v
   );
 }
 
+function ImageUrlField({ label, variant, value, preview, onChange, placeholder }: { label: string; variant: "avatar" | "banner"; value: string; preview?: string; onChange: (value: string) => void; placeholder?: string }) {
+  const isAvatar = variant === "avatar";
+  const hasPreview = Boolean(preview);
+
+  return (
+    <div className={isAvatar ? "" : "md:col-span-2"}>
+      <p className="mb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-purple-400/80">{label}</p>
+      <div
+        className={`relative overflow-hidden border transition-all duration-200 ${hasPreview ? "border-purple-500/35 bg-black/40" : "border-purple-500/20 bg-black/40"}`}
+        style={isAvatar ? { width: "100%", aspectRatio: "1/1", maxHeight: 140 } : { width: "100%", height: 100 }}
+      >
+        <Corners size={7} color="rgba(168,85,247,0.4)" />
+        {hasPreview ? (
+          <>
+            <img src={preview} alt={label} className="h-full w-full object-cover" style={isAvatar ? { borderRadius: "50%" } : { filter: "brightness(0.75) saturate(1.05)" }} />
+            <div className="absolute inset-x-0 bottom-0 bg-black/70 p-2">
+              <p className="truncate text-[9px] font-black uppercase tracking-[0.15em] text-purple-300">Preview sincronizado</p>
+            </div>
+          </>
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-2 p-4">
+            <div className="flex h-9 w-9 items-center justify-center border border-purple-500/30 bg-purple-500/10">
+              <ImageIcon size={16} className="text-purple-400/60" />
+            </div>
+            <p className="text-center text-[10px] font-black text-slate-500">Informe uma URL publica para visualizar</p>
+          </div>
+        )}
+      </div>
+      <div className="mt-3">
+        <TacticalInput label={`${label} URL`} value={value} onChange={onChange} placeholder={placeholder} />
+      </div>
+    </div>
+  );
+}
+
 function SectionHeader({ icon: Icon, title }: { icon: ElementType; title: string }) {
   return (
     <div className="flex items-center gap-3 border-b border-purple-500/10 px-5 py-4">
@@ -246,7 +306,7 @@ function TacticalSubmitButton({ saving, children }: { saving?: boolean; children
   );
 }
 
-function VideoCarousel({ videos }: { videos: Array<{ id: string; title?: string; thumbnail_url?: string; content_url?: string; published_at?: string }> }) {
+function VideoCarousel({ videos }: { videos: Array<{ id: string; title?: string; thumbnail_url?: string; content_url?: string; published_at?: string; view_count?: number }> }) {
   const [active, setActive] = useState(0);
   if (!videos.length) return null;
 
@@ -289,6 +349,9 @@ function VideoCarousel({ videos }: { videos: Array<{ id: string; title?: string;
           <div className="absolute bottom-0 left-0 right-0 p-4">
             <p className="line-clamp-2 text-base font-black leading-snug text-white" style={{ textShadow: "0 2px 8px rgba(0,0,0,0.8)" }}>{current.title || "Video publicado"}</p>
             <div className="mt-2 flex items-center gap-4">
+              <span className="flex items-center gap-1.5 text-[10px] font-bold text-purple-300">
+                <Eye size={10} /> {formatCompactNumber(current.view_count)} views
+              </span>
               <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
                 <CalendarDays size={10} />
                 {current.published_at ? new Date(current.published_at).toLocaleDateString("pt-BR") : "Data pendente"}
@@ -307,6 +370,45 @@ function VideoCarousel({ videos }: { videos: Array<{ id: string; title?: string;
           )}
         </div>
       </a>
+
+      {videos.length > 1 && (
+        <>
+          <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${videos.length}, 1fr)` }}>
+            {videos.map((video, index) => (
+              <button
+                key={video.id}
+                type="button"
+                onClick={() => setActive(index)}
+                className={`group relative overflow-hidden border text-left transition-all duration-200 ${index === active ? "border-purple-500/60" : "border-purple-500/12 opacity-60 hover:border-purple-500/35 hover:opacity-80"}`}
+                style={index === active ? { boxShadow: "0 0 16px rgba(168,85,247,0.2)" } : {}}
+              >
+                <Corners size={5} color={index === active ? "rgba(168,85,247,0.8)" : "rgba(168,85,247,0.3)"} />
+                <div className="relative h-16 overflow-hidden">
+                  {video.thumbnail_url && <img src={video.thumbnail_url} alt={video.title || "Video"} className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" style={{ filter: index === active ? "brightness(0.65) saturate(1.1)" : "brightness(0.4) saturate(0.8)" }} />}
+                  <div className="absolute inset-0" style={{ background: "linear-gradient(to top, rgba(2,3,7,0.85) 0%, transparent 60%)" }} />
+                  {index === active && <div className="absolute inset-x-0 bottom-0 h-[2px] bg-gradient-to-r from-transparent via-purple-500 to-transparent" />}
+                  <span className={`absolute right-1.5 top-1.5 font-mono text-[8px] font-black ${index === active ? "text-purple-300" : "text-slate-600"}`}>#{String(index + 1).padStart(2, "0")}</span>
+                </div>
+                <div className="p-2">
+                  <p className={`line-clamp-2 text-[10px] font-black leading-tight ${index === active ? "text-white" : "text-slate-500"}`}>{video.title || "Video publicado"}</p>
+                  <p className="mt-1 flex items-center gap-1 text-[9px] text-slate-600"><Eye size={8} /> {formatCompactNumber(video.view_count)}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+          <div className="flex justify-center gap-1.5 pt-1">
+            {videos.map((video, index) => (
+              <button
+                key={`${video.id}-dot`}
+                type="button"
+                onClick={() => setActive(index)}
+                className="transition-all duration-200"
+                style={{ width: index === active ? 20 : 6, height: 4, background: index === active ? "linear-gradient(90deg, #9333ea, #a855f7)" : "rgba(168,85,247,0.25)", boxShadow: index === active ? "0 0 8px rgba(168,85,247,0.5)" : "none" }}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -569,36 +671,59 @@ export function Profile() {
           </div>
         </div>
 
-        {notice && <div className="border border-[#84cc16]/35 bg-[#84cc16]/10 p-3 text-sm font-bold text-[#bef264]">{notice}</div>}
-        {error && <div className="border border-[#ef4444]/35 bg-[#ef4444]/10 p-3 text-sm font-bold text-[#fecaca]">{error}</div>}
+        {notice && (
+          <div className="relative border border-[#84cc16]/35 bg-[#84cc16]/10 p-3">
+            <Corners size={6} color="rgba(132,204,22,0.5)" />
+            <p className="text-sm font-bold text-[#bef264]">{notice}</p>
+          </div>
+        )}
+        {error && (
+          <div className="relative border border-[#ef4444]/35 bg-[#ef4444]/10 p-3">
+            <Corners size={6} color="rgba(239,68,68,0.5)" />
+            <p className="text-sm font-bold text-[#fecaca]">{error}</p>
+          </div>
+        )}
 
         {activeTab === "resumo" && (
-          <section>
-            <HudPanel accent>
-              <SectionHeader icon={UserIcon} title="Resumo Operacional" />
-              <div className="grid gap-4 p-5 md:grid-cols-3">
-                {[
-                  { label: "Discord ID", value: user.discord_id || profile.discord_id || "N/A", mono: true },
-                  { label: "Rank", value: profile.level || "N/A" },
-                  { label: "Coins", value: profile.coins || 0 },
-                ].map((item) => (
-                  <div key={item.label} className="relative border border-purple-500/15 bg-black/35 p-4" style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.06)" }}>
-                    <Corners size={6} />
-                    <p className="tactical-label">{item.label}</p>
-                    <p className={`mt-2 break-all text-xl font-black uppercase tracking-[0.04em] text-white ${item.mono ? "font-mono text-sm normal-case tracking-normal" : ""}`} style={{ textShadow: "0 0 16px rgba(168,85,247,0.25)" }}>
-                      {item.value}
-                    </p>
-                  </div>
-                ))}
-                <div className="relative border border-purple-500/15 bg-black/25 p-4 md:col-span-3" style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.06)" }}>
-                  <Corners size={6} />
-                  <p className="tactical-label">Campos protegidos</p>
-                  <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
-                    Cargos, Discord ID, flags de admin/moderador/criador e role_ids vem da API/Discord e nao podem ser alterados pelo site.
+          <section className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-3">
+              <StatCard label="Discord ID" value={user.discord_id || profile.discord_id || "N/A"} icon={Radio} sub="Conta vinculada" />
+              <StatCard label="Rank" value={profile.level || "N/A"} icon={Sword} sub="Temporada atual" />
+              <StatCard label="STG Coins" value={formatCompactNumber(profile.coins)} icon={Activity} sub="Disponiveis" />
+            </div>
+
+            <HudPanel className="p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-6 w-6 shrink-0 items-center justify-center border border-purple-500/30 bg-purple-500/10">
+                  <Shield size={12} className="text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-[9px] font-black uppercase tracking-[0.18em] text-purple-400/80">Campos Protegidos</p>
+                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                    Cargos, Discord ID, flags de admin/moderador/criador e role_ids vem da API/Discord e <span className="font-bold text-purple-300/90">nao podem ser alterados pelo site</span>. Sincronizados automaticamente com sua conta Discord vinculada.
                   </p>
                 </div>
               </div>
             </HudPanel>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="relative border border-purple-500/20 bg-[#08090e] p-5" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+                <Corners size={8} />
+                <p className="mb-2 text-[9px] font-black uppercase tracking-[0.18em] text-purple-400/80">Username</p>
+                <p className="break-all font-mono text-sm text-white">@{user.username || user.discord_username || profile.username || username}</p>
+              </div>
+              <div className="relative border border-purple-500/20 bg-[#08090e] p-5" style={{ boxShadow: "0 4px 24px rgba(0,0,0,0.5)" }}>
+                <Corners size={8} />
+                <p className="mb-2 text-[9px] font-black uppercase tracking-[0.18em] text-purple-400/80">Status Operacional</p>
+                <div className="flex items-center gap-3">
+                  <span className="relative flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-60" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-green-400" style={{ boxShadow: "0 0 8px #4ade80" }} />
+                  </span>
+                  <span className="text-sm font-black uppercase tracking-widest text-green-400">Operacional</span>
+                </div>
+              </div>
+            </div>
           </section>
         )}
 
@@ -606,13 +731,13 @@ export function Profile() {
           <form onSubmit={savePublicProfile}>
             <HudPanel accent>
               <SectionHeader icon={AtSign} title="Perfil Publico" />
-              <div className="grid gap-4 p-5 md:grid-cols-2">
+              <div className="grid gap-5 p-5 md:grid-cols-2">
                 <TacticalInput label="Nome publico" value={publicForm.public_name || ""} onChange={(value) => setPublicForm({ ...publicForm, public_name: value })} />
                 <TacticalInput label="Email publico" value={publicForm.public_email || ""} onChange={(value) => setPublicForm({ ...publicForm, public_email: value })} />
-                <TacticalInput label="Avatar publico URL" value={publicForm.public_avatar_url || ""} onChange={(value) => setPublicForm({ ...publicForm, public_avatar_url: value })} />
-                <TacticalInput label="Banner publico URL" value={publicForm.public_banner_url || ""} onChange={(value) => setPublicForm({ ...publicForm, public_banner_url: value })} />
                 <TacticalInput label="Localizacao opcional" value={publicForm.location_optional || ""} onChange={(value) => setPublicForm({ ...publicForm, location_optional: value })} />
                 <TacticalInput label="Pronomes" value={publicForm.pronouns || ""} onChange={(value) => setPublicForm({ ...publicForm, pronouns: value })} />
+                <ImageUrlField label="Avatar publico" variant="avatar" value={publicForm.public_avatar_url || ""} preview={publicForm.public_avatar_url || avatarUrl} onChange={(value) => setPublicForm({ ...publicForm, public_avatar_url: value })} placeholder="https://..." />
+                <ImageUrlField label="Banner publico" variant="banner" value={publicForm.public_banner_url || ""} preview={publicForm.public_banner_url || "/assets/tactical-ops-bg.png"} onChange={(value) => setPublicForm({ ...publicForm, public_banner_url: value })} placeholder="https://..." />
                 <div className="md:col-span-2">
                   <TacticalTextarea label="Bio" value={publicForm.bio || ""} onChange={(value) => setPublicForm({ ...publicForm, bio: value })} />
                 </div>
@@ -630,8 +755,8 @@ export function Profile() {
         {activeTab === "privacidade" && (
           <form onSubmit={savePublicProfile}>
             <HudPanel accent>
-              <SectionHeader icon={Lock} title="Privacidade" />
-              <div className="grid gap-4 p-5 md:grid-cols-2">
+              <SectionHeader icon={Lock} title="Privacidade & Visibilidade" />
+              <div className="grid gap-5 p-5 md:grid-cols-2">
                 <TacticalSelect label="Visibilidade do perfil" value={publicForm.profile_visibility || "public"} onChange={(value) => setPublicForm({ ...publicForm, profile_visibility: value as PublicProfilePayload["profile_visibility"] })}>
                   <option value="public">Publico</option>
                   <option value="members">Membros</option>
@@ -642,11 +767,16 @@ export function Profile() {
                   <option value="private">Privada</option>
                   <option value="public">Publica</option>
                 </TacticalSelect>
-                <div className="relative border border-purple-500/15 bg-black/25 p-4" style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.06)" }}>
-                  <Corners size={6} />
-                  <p className="flex items-center gap-2 text-sm font-bold text-slate-500">
-                    <EyeOff size={16} className="text-purple-400/70" /> Email publico so sera exibido quando a API considerar o campo publico.
-                  </p>
+                <div className="relative border border-yellow-500/20 p-4" style={{ background: "linear-gradient(135deg, rgba(234,179,8,0.06) 0%, rgba(234,179,8,0.02) 100%)" }}>
+                  <Corners size={7} color="rgba(234,179,8,0.5)" />
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center border border-yellow-500/30 bg-yellow-500/10">
+                      <AlertTriangle size={11} className="text-yellow-400" />
+                    </div>
+                    <p className="text-sm leading-6 text-yellow-200/70">
+                      <span className="font-black text-yellow-300">Email publico</span> so sera exibido quando a API considerar o campo publico.
+                    </p>
+                  </div>
                 </div>
                 <div className="md:col-span-2 flex justify-end">
                   <TacticalSubmitButton saving={saving || loading}>
@@ -816,52 +946,54 @@ export function Profile() {
                         <p className="mt-1 text-sm font-bold uppercase text-white">{primaryCreatorChannel?.last_checked_at ? new Date(primaryCreatorChannel.last_checked_at).toLocaleDateString("pt-BR") : "Pendente"}</p>
                       </div>
                     </div>
-                    {primaryChannelContent.length > 0 && (
-                      <div>
-                        <p className="tactical-label">Ultimos videos</p>
-                        <div className="mt-3 grid gap-3">
-                          {primaryChannelContent.map((content) => (
-                            <a key={content.id} href={content.content_url} target="_blank" rel="noreferrer" className="flex gap-3 border border-[#a855f7]/18 bg-black/20 p-2 hover:border-[#a855f7]/45">
-                              {content.thumbnail_url && <img src={content.thumbnail_url} alt={content.title || "Video"} className="h-16 w-28 object-cover" />}
-                              <div className="min-w-0">
-                                <p className="line-clamp-2 text-sm font-black text-white">{content.title || "Video publicado"}</p>
-                                <p className="mt-1 text-xs font-bold text-[#94a3b8]">{content.published_at ? new Date(content.published_at).toLocaleDateString("pt-BR") : "Data pendente"}</p>
-                              </div>
-                            </a>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
 
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="tactical-label">Plataformas cadastradas</p>
-                      {visibleCreatorProfile.channels.length === 0 && <span className="text-xs font-bold text-[#94a3b8]">Nenhuma plataforma cadastrada</span>}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3 pb-1">
+                      <p className="text-[9px] font-black uppercase tracking-[0.2em] text-purple-400/70">Plataformas Cadastradas</p>
+                      <div className="h-[1px] flex-1 bg-gradient-to-r from-purple-500/20 to-transparent" />
+                      <span className="text-[9px] font-black text-slate-600">{visibleCreatorProfile.channels.length} ativas</span>
                     </div>
 
+                    {visibleCreatorProfile.channels.length === 0 && (
+                      <div className="relative border border-purple-500/12 bg-[#0a0b10] p-4 text-sm font-bold text-slate-500">
+                        <Corners size={6} />
+                        Nenhuma plataforma cadastrada
+                      </div>
+                    )}
+
                     {visibleCreatorProfile.channels.map((channel) => (
-                      <div key={channel.id} className="border border-[#a855f7]/24 bg-[#111827]/70 p-4">
-                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <CreatorPlatformBadge platform={channel.platform} />
-                              <span className={channel.is_active ? "stg-badge-success" : "stg-badge-danger"}>{channel.is_active ? "Ativo" : "Inativo"}</span>
+                      <div key={channel.id} className="group relative border border-purple-500/12 bg-[#0a0b10] transition-all duration-200 hover:border-purple-500/30" style={{ boxShadow: "0 2px 12px rgba(0,0,0,0.35)" }}>
+                        <Corners size={6} />
+                        {channel.is_active && <div className="absolute inset-y-0 left-0 w-[2px] bg-gradient-to-b from-transparent via-purple-500/60 to-transparent" />}
+                        <div className="flex flex-col gap-3 px-4 py-3 md:flex-row md:items-center">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: platformColors[channel.platform] || "#a855f7", boxShadow: `0 0 6px ${platformColors[channel.platform] || "#a855f7"}` }} />
+                              <p className="truncate text-sm font-black uppercase tracking-[0.04em] text-white">{getChannelLabel(channel)}</p>
                             </div>
-                            <p className="mt-3 break-words text-lg font-black uppercase tracking-[0.04em] text-white">{getChannelLabel(channel)}</p>
-                            <div className="mt-3 grid gap-2 text-sm text-[#cbd5e1]">
-                              {channel.handle && <p><span className="font-black uppercase text-[#94a3b8]">Handle:</span> {channel.handle}</p>}
-                              {channel.channel_id && <p><span className="font-black uppercase text-[#94a3b8]">ID:</span> {channel.channel_id}</p>}
-                              {channel.channel_url && (
-                                <a href={channel.channel_url} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-2 break-all font-bold text-[#c084fc] hover:text-white">
-                                  <ExternalLink size={14} /> {channel.channel_url}
-                                </a>
-                              )}
-                            </div>
+                            <p className="mt-0.5 truncate pl-4 text-[9px] font-bold text-slate-600">
+                              {platformLabels[channel.platform] || channel.platform}{channel.handle ? ` - ${channel.handle}` : channel.channel_id ? ` - ${channel.channel_id}` : ""}
+                            </p>
                           </div>
-                          <div className="flex shrink-0 gap-2">
-                            <button type="button" onClick={() => { setEditingChannel(channel); setChannelForm({ platform: channel.platform, channel_url: channel.channel_url || "", is_active: channel.is_active }); }} className="stg-button-outline inline-flex items-center gap-2 px-3 py-2 text-xs"><LinkIcon size={14} /> Editar</button>
-                            <button type="button" onClick={() => void removeChannel(channel)} className="stg-button-danger inline-flex items-center gap-2 px-3 py-2 text-xs"><Trash2 size={14} /> Remover</button>
+                          <div className="flex flex-wrap items-center gap-2 md:shrink-0">
+                            <span className="flex items-center gap-1 border border-purple-500/15 bg-black/30 px-2 py-1 text-[9px] font-black text-slate-400" title="Inscritos">
+                              <TrendingUp size={9} className="text-purple-400/60" /> {formatCompactNumber(channel.subscriber_count)}
+                            </span>
+                            <span className="flex items-center gap-1 border border-purple-500/15 bg-black/30 px-2 py-1 text-[9px] font-black text-slate-400" title="Views">
+                              <Eye size={9} className="text-purple-400/60" /> {formatCompactNumber(channel.view_count)}
+                            </span>
+                            {channel.channel_url && (
+                              <a href={channel.channel_url} target="_blank" rel="noreferrer" className="flex h-7 w-7 items-center justify-center border border-purple-500/20 bg-black/30 text-purple-400/50 transition-colors hover:border-purple-400/50 hover:text-purple-300" title="Abrir canal">
+                                <ExternalLink size={11} />
+                              </a>
+                            )}
+                            <button type="button" onClick={() => { setEditingChannel(channel); setChannelForm({ platform: channel.platform, channel_url: channel.channel_url || "", is_active: channel.is_active }); }} title="Editar" className="flex h-7 w-7 items-center justify-center border border-purple-500/20 bg-purple-500/8 text-purple-400/70 transition-all hover:border-purple-400/50 hover:text-purple-300">
+                              <LinkIcon size={11} />
+                            </button>
+                            <button type="button" onClick={() => void removeChannel(channel)} title="Remover" className="flex h-7 w-7 items-center justify-center border border-red-500/15 bg-red-500/6 text-red-500/50 transition-all hover:border-red-400/40 hover:bg-red-500/15 hover:text-red-400">
+                              <Trash2 size={11} />
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -876,7 +1008,7 @@ export function Profile() {
               {(creatorProfile?.channels ?? []).map((channel) => (
                 <div key={channel.id} className="stg-hud-panel flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
                   <div className="min-w-0">
-                    <CreatorPlatformBadge platform={channel.platform} />
+                    <PlatformBadge platform={channel.platform} />
                     <p className="mt-2 break-all text-sm font-bold text-white">{channel.channel_url || channel.handle || "Canal sem URL retornada"}</p>
                   </div>
                   <div className="flex gap-2">
