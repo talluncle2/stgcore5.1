@@ -186,6 +186,24 @@ function TacticalInput({ label, value, onChange, placeholder }: { label: string;
   );
 }
 
+function TacticalTextarea({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (value: string) => void; placeholder?: string }) {
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-[9px] font-black uppercase tracking-[0.18em] text-purple-400/80">{label}</span>
+      <div className="relative">
+        <textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          placeholder={placeholder}
+          className="min-h-28 w-full resize-y border border-purple-500/15 bg-black/60 px-3 py-2.5 text-sm text-white outline-none placeholder:text-slate-700 focus:border-purple-500/50 focus:bg-black/80"
+          style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.04)" }}
+        />
+        <div className="pointer-events-none absolute bottom-0 right-0 h-2 w-2 border-b border-r border-purple-500/40" />
+      </div>
+    </label>
+  );
+}
+
 function TacticalSelect({ label, value, onChange, children }: { label: string; value: string; onChange: (value: string) => void; children: ReactNode }) {
   return (
     <label className="block">
@@ -555,10 +573,97 @@ export function Profile() {
         {error && <div className="border border-[#ef4444]/35 bg-[#ef4444]/10 p-3 text-sm font-bold text-[#fecaca]">{error}</div>}
 
         {activeTab === "resumo" && (
+          <section>
+            <HudPanel accent>
+              <SectionHeader icon={UserIcon} title="Resumo Operacional" />
+              <div className="grid gap-4 p-5 md:grid-cols-3">
+                {[
+                  { label: "Discord ID", value: user.discord_id || profile.discord_id || "N/A", mono: true },
+                  { label: "Rank", value: profile.level || "N/A" },
+                  { label: "Coins", value: profile.coins || 0 },
+                ].map((item) => (
+                  <div key={item.label} className="relative border border-purple-500/15 bg-black/35 p-4" style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.06)" }}>
+                    <Corners size={6} />
+                    <p className="tactical-label">{item.label}</p>
+                    <p className={`mt-2 break-all text-xl font-black uppercase tracking-[0.04em] text-white ${item.mono ? "font-mono text-sm normal-case tracking-normal" : ""}`} style={{ textShadow: "0 0 16px rgba(168,85,247,0.25)" }}>
+                      {item.value}
+                    </p>
+                  </div>
+                ))}
+                <div className="relative border border-purple-500/15 bg-black/25 p-4 md:col-span-3" style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.06)" }}>
+                  <Corners size={6} />
+                  <p className="tactical-label">Campos protegidos</p>
+                  <p className="mt-2 text-sm font-bold leading-6 text-slate-500">
+                    Cargos, Discord ID, flags de admin/moderador/criador e role_ids vem da API/Discord e nao podem ser alterados pelo site.
+                  </p>
+                </div>
+              </div>
+            </HudPanel>
+          </section>
+        )}
+
+        {activeTab === "publico" && (
+          <form onSubmit={savePublicProfile}>
+            <HudPanel accent>
+              <SectionHeader icon={AtSign} title="Perfil Publico" />
+              <div className="grid gap-4 p-5 md:grid-cols-2">
+                <TacticalInput label="Nome publico" value={publicForm.public_name || ""} onChange={(value) => setPublicForm({ ...publicForm, public_name: value })} />
+                <TacticalInput label="Email publico" value={publicForm.public_email || ""} onChange={(value) => setPublicForm({ ...publicForm, public_email: value })} />
+                <TacticalInput label="Avatar publico URL" value={publicForm.public_avatar_url || ""} onChange={(value) => setPublicForm({ ...publicForm, public_avatar_url: value })} />
+                <TacticalInput label="Banner publico URL" value={publicForm.public_banner_url || ""} onChange={(value) => setPublicForm({ ...publicForm, public_banner_url: value })} />
+                <TacticalInput label="Localizacao opcional" value={publicForm.location_optional || ""} onChange={(value) => setPublicForm({ ...publicForm, location_optional: value })} />
+                <TacticalInput label="Pronomes" value={publicForm.pronouns || ""} onChange={(value) => setPublicForm({ ...publicForm, pronouns: value })} />
+                <div className="md:col-span-2">
+                  <TacticalTextarea label="Bio" value={publicForm.bio || ""} onChange={(value) => setPublicForm({ ...publicForm, bio: value })} />
+                </div>
+                <div className="md:col-span-2 flex justify-end">
+                  <TacticalSubmitButton saving={saving || loading}>
+                    {saving ? <RefreshCw className="animate-spin" size={13} /> : <Save size={13} />}
+                    Salvar perfil
+                  </TacticalSubmitButton>
+                </div>
+              </div>
+            </HudPanel>
+          </form>
+        )}
+
+        {activeTab === "privacidade" && (
+          <form onSubmit={savePublicProfile}>
+            <HudPanel accent>
+              <SectionHeader icon={Lock} title="Privacidade" />
+              <div className="grid gap-4 p-5 md:grid-cols-2">
+                <TacticalSelect label="Visibilidade do perfil" value={publicForm.profile_visibility || "public"} onChange={(value) => setPublicForm({ ...publicForm, profile_visibility: value as PublicProfilePayload["profile_visibility"] })}>
+                  <option value="public">Publico</option>
+                  <option value="members">Membros</option>
+                  <option value="private">Privado</option>
+                </TacticalSelect>
+                <TacticalInput label="Orientacao sexual opcional" value={publicForm.sexual_orientation || ""} onChange={(value) => setPublicForm({ ...publicForm, sexual_orientation: value })} />
+                <TacticalSelect label="Visibilidade da orientacao" value={publicForm.sexual_orientation_visibility || "private"} onChange={(value) => setPublicForm({ ...publicForm, sexual_orientation_visibility: value as PublicProfilePayload["sexual_orientation_visibility"] })}>
+                  <option value="private">Privada</option>
+                  <option value="public">Publica</option>
+                </TacticalSelect>
+                <div className="relative border border-purple-500/15 bg-black/25 p-4" style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.06)" }}>
+                  <Corners size={6} />
+                  <p className="flex items-center gap-2 text-sm font-bold text-slate-500">
+                    <EyeOff size={16} className="text-purple-400/70" /> Email publico so sera exibido quando a API considerar o campo publico.
+                  </p>
+                </div>
+                <div className="md:col-span-2 flex justify-end">
+                  <TacticalSubmitButton saving={saving || loading}>
+                    {saving ? <RefreshCw className="animate-spin" size={13} /> : <Save size={13} />}
+                    Salvar perfil
+                  </TacticalSubmitButton>
+                </div>
+              </div>
+            </HudPanel>
+          </form>
+        )}
+
+        {false && activeTab === "resumo" && (
           <section className="grid gap-4 md:grid-cols-3">
-            <div className="stg-hud-panel p-5"><p className="tactical-label">Discord ID</p><p className="mt-2 break-all font-mono text-sm text-white">{user.discord_id || profile.discord_id || "N/A"}</p></div>
-            <div className="stg-hud-panel p-5"><p className="tactical-label">Rank</p><p className="mt-2 text-2xl font-black text-white">{profile.level}</p></div>
-            <div className="stg-hud-panel p-5"><p className="tactical-label">Coins</p><p className="mt-2 text-2xl font-black text-white">{profile.coins}</p></div>
+            <div className="stg-hud-panel p-5"><p className="tactical-label">Discord ID</p><p className="mt-2 break-all font-mono text-sm text-white">{user?.discord_id || profile?.discord_id || "N/A"}</p></div>
+            <div className="stg-hud-panel p-5"><p className="tactical-label">Rank</p><p className="mt-2 text-2xl font-black text-white">{profile?.level}</p></div>
+            <div className="stg-hud-panel p-5"><p className="tactical-label">Coins</p><p className="mt-2 text-2xl font-black text-white">{profile?.coins}</p></div>
             <div className="stg-hud-panel md:col-span-3 p-5">
               <p className="tactical-label">Campos protegidos</p>
               <p className="mt-2 text-sm text-[#94a3b8]">Cargos, Discord ID, flags de admin/moderador/criador e role_ids vêm da API/Discord e nao podem ser alterados pelo site.</p>
@@ -566,7 +671,7 @@ export function Profile() {
           </section>
         )}
 
-        {(activeTab === "publico" || activeTab === "privacidade") && (
+        {false && (activeTab === "publico" || activeTab === "privacidade") && (
           <form onSubmit={savePublicProfile} className="stg-hud-panel grid gap-4 p-5 md:grid-cols-2">
             {activeTab === "publico" ? (
               <>
