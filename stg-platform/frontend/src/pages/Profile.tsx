@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AtSign, EyeOff, Link as LinkIcon, Lock, Plus, RefreshCw, Save, Trash2, User as UserIcon, Video } from "lucide-react";
+import { AtSign, ExternalLink, EyeOff, Link as LinkIcon, Lock, Plus, RefreshCw, Save, Trash2, User as UserIcon, Video } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { CreatorPlatformBadge } from "../components/creators/CreatorPlatformBadge";
 import { useAuth } from "../context/AuthContext";
@@ -54,6 +54,19 @@ function createLocalCreatorProfile(user: AuthUser, channel?: CreatorChannel): Co
   };
 }
 
+function getChannelLabel(channel: CreatorChannel): string {
+  if (channel.channel_name) return channel.channel_name;
+  if (channel.handle) return channel.handle;
+  if (!channel.channel_url) return "Canal cadastrado";
+  try {
+    const url = new URL(channel.channel_url);
+    const cleanPath = url.pathname.replace(/^\/+|\/+$/g, "");
+    return cleanPath || url.hostname.replace(/^www\./, "");
+  } catch {
+    return channel.channel_url;
+  }
+}
+
 export function Profile() {
   const { user, profile, refreshUser } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -73,6 +86,7 @@ export function Profile() {
   const isAdmin = hasAdminAccess(identity);
   const username = profile?.username || user?.display_name || user?.username || user?.discord_username || "Operador";
   const avatarUrl = publicForm.public_avatar_url || profile?.avatar_url || user?.avatar_url || user?.discord_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=a855f7&color=fff`;
+  const visibleCreatorProfile = user ? (creatorProfile || createLocalCreatorProfile(user)) : null;
 
   useEffect(() => {
     async function load() {
@@ -313,7 +327,103 @@ export function Profile() {
               <p className="md:col-span-3 text-xs text-[#94a3b8]">Informe apenas URLs publicas. Nao ha API key, OAuth ou token no frontend.</p>
             </form>
 
-            <div className="grid gap-3">
+            {visibleCreatorProfile && (
+              <section className="overflow-hidden border border-[#a855f7]/35 bg-[#050608] shadow-xl shadow-[#a855f7]/10">
+                <div
+                  className="min-h-44 bg-cover bg-center"
+                  style={{
+                    backgroundImage: `linear-gradient(90deg, rgba(0,0,0,.88), rgba(17,24,39,.72), rgba(88,28,135,.38)), url("${publicForm.public_banner_url || visibleCreatorProfile.public_banner_url || "/assets/tactical-ops-bg.png"}")`,
+                  }}
+                >
+                  <div className="flex min-h-44 flex-col justify-end gap-5 p-5 md:flex-row md:items-end md:justify-between">
+                    <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-end">
+                      <img
+                        src={publicForm.public_avatar_url || visibleCreatorProfile.public_avatar_url || visibleCreatorProfile.avatar_url || avatarUrl}
+                        alt={visibleCreatorProfile.public_name || visibleCreatorProfile.display_name || username}
+                        className="size-24 rounded-full border-4 border-[#050608] object-cover shadow-xl shadow-[#a855f7]/20"
+                      />
+                      <div className="min-w-0">
+                        <p className="tactical-label">Perfil de criador</p>
+                        <h2 className="mt-1 break-words text-2xl font-black uppercase tracking-[0.08em] text-white">
+                          {visibleCreatorProfile.public_name || visibleCreatorProfile.display_name || publicForm.public_name || username}
+                        </h2>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="stg-badge-danger">Criador STG</span>
+                          <span className="stg-badge-purple">{visibleCreatorProfile.channels.length} plataforma{visibleCreatorProfile.channels.length === 1 ? "" : "s"}</span>
+                          {visibleCreatorProfile.is_featured && <span className="stg-badge-success">Destaque</span>}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid gap-2 text-left md:min-w-64">
+                      <div>
+                        <p className="tactical-label">Discord ID</p>
+                        <p className="break-all font-mono text-sm font-bold text-white">{visibleCreatorProfile.discord_id || user.discord_id || "N/A"}</p>
+                      </div>
+                      <div>
+                        <p className="tactical-label">Usuario</p>
+                        <p className="break-all text-sm font-bold text-white">{visibleCreatorProfile.username || user.discord_username || username}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-5 p-5 lg:grid-cols-[1fr_1.4fr]">
+                  <div className="space-y-4">
+                    <div>
+                      <p className="tactical-label">Bio publica</p>
+                      <p className="mt-2 text-sm leading-6 text-[#cbd5e1]">{visibleCreatorProfile.bio || publicForm.bio || "Sem bio publica cadastrada."}</p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="border border-[#a855f7]/20 bg-black/25 p-3">
+                        <p className="tactical-label">Email publico</p>
+                        <p className="mt-1 break-all text-sm font-bold text-white">{publicForm.public_email || visibleCreatorProfile.public_email || "Nao informado"}</p>
+                      </div>
+                      <div className="border border-[#a855f7]/20 bg-black/25 p-3">
+                        <p className="tactical-label">Visibilidade</p>
+                        <p className="mt-1 text-sm font-bold uppercase text-white">{publicForm.profile_visibility || visibleCreatorProfile.profile_visibility || "public"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="tactical-label">Plataformas cadastradas</p>
+                      {visibleCreatorProfile.channels.length === 0 && <span className="text-xs font-bold text-[#94a3b8]">Nenhuma plataforma cadastrada</span>}
+                    </div>
+
+                    {visibleCreatorProfile.channels.map((channel) => (
+                      <div key={channel.id} className="border border-[#a855f7]/24 bg-[#111827]/70 p-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div className="min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <CreatorPlatformBadge platform={channel.platform} />
+                              <span className={channel.is_active ? "stg-badge-success" : "stg-badge-danger"}>{channel.is_active ? "Ativo" : "Inativo"}</span>
+                            </div>
+                            <p className="mt-3 break-words text-lg font-black uppercase tracking-[0.04em] text-white">{getChannelLabel(channel)}</p>
+                            <div className="mt-3 grid gap-2 text-sm text-[#cbd5e1]">
+                              {channel.handle && <p><span className="font-black uppercase text-[#94a3b8]">Handle:</span> {channel.handle}</p>}
+                              {channel.channel_id && <p><span className="font-black uppercase text-[#94a3b8]">ID:</span> {channel.channel_id}</p>}
+                              {channel.channel_url && (
+                                <a href={channel.channel_url} target="_blank" rel="noreferrer" className="inline-flex min-w-0 items-center gap-2 break-all font-bold text-[#c084fc] hover:text-white">
+                                  <ExternalLink size={14} /> {channel.channel_url}
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex shrink-0 gap-2">
+                            <button type="button" onClick={() => { setEditingChannel(channel); setChannelForm({ platform: channel.platform, channel_url: channel.channel_url || "", is_active: channel.is_active }); }} className="stg-button-outline inline-flex items-center gap-2 px-3 py-2 text-xs"><LinkIcon size={14} /> Editar</button>
+                            <button type="button" onClick={() => void removeChannel(channel)} className="stg-button-danger inline-flex items-center gap-2 px-3 py-2 text-xs"><Trash2 size={14} /> Remover</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
+            <div className="hidden">
               {(creatorProfile?.channels ?? []).map((channel) => (
                 <div key={channel.id} className="stg-hud-panel flex flex-col gap-3 p-4 md:flex-row md:items-center md:justify-between">
                   <div className="min-w-0">
