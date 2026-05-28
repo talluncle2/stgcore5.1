@@ -43,6 +43,7 @@ import { hasAdminAccess, hasCreatorAccess } from "../utils/permissions";
 type ProfileTab = "resumo" | "publico" | "criador" | "privacidade";
 
 const platforms: CreatorPlatform[] = ["youtube", "twitch", "kick", "tiktok", "instagram", "x"];
+const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const platformColors: Record<string, string> = {
   youtube: "#FF0000",
@@ -245,23 +246,38 @@ function TacticalSelect({ label, value, onChange, children }: { label: string; v
   );
 }
 
-function ImageUrlField({ label, variant, value, preview, onChange, placeholder }: { label: string; variant: "avatar" | "banner"; value: string; preview?: string; onChange: (value: string) => void; placeholder?: string }) {
+function ImageUploadField({ label, variant, value, fallbackPreview, onChange }: { label: string; variant: "avatar" | "banner"; value: string; fallbackPreview?: string; onChange: (value: string) => void }) {
   const isAvatar = variant === "avatar";
+  const preview = value || fallbackPreview || "";
   const hasPreview = Boolean(preview);
+  const isUploadedImage = value.startsWith("data:image/");
+
+  function handleFile(file?: File) {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    if (file.size > MAX_PROFILE_IMAGE_BYTES) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        onChange(reader.result);
+      }
+    };
+    reader.readAsDataURL(file);
+  }
 
   return (
     <div className={isAvatar ? "" : "md:col-span-2"}>
       <p className="mb-1.5 text-[9px] font-black uppercase tracking-[0.18em] text-purple-400/80">{label}</p>
-      <div
-        className={`relative overflow-hidden border transition-all duration-200 ${hasPreview ? "border-purple-500/35 bg-black/40" : "border-purple-500/20 bg-black/40"}`}
-        style={isAvatar ? { width: "100%", aspectRatio: "1/1", maxHeight: 140 } : { width: "100%", height: 100 }}
+      <label
+        className={`relative flex cursor-pointer overflow-hidden border transition-all duration-200 hover:border-purple-500/45 ${hasPreview ? "border-purple-500/35 bg-black/40" : "border-purple-500/20 bg-black/40"} ${isAvatar ? "h-36 w-36 max-w-full rounded-full" : "h-32 w-full"}`}
       >
         <Corners size={7} color="rgba(168,85,247,0.4)" />
         {hasPreview ? (
           <>
-            <img src={preview} alt={label} className="h-full w-full object-cover" style={isAvatar ? { borderRadius: "50%" } : { filter: "brightness(0.75) saturate(1.05)" }} />
+            <img src={preview} alt={label} className={`h-full w-full object-cover ${isAvatar ? "rounded-full" : ""}`} style={isAvatar ? undefined : { filter: "brightness(0.75) saturate(1.05)" }} />
             <div className="absolute inset-x-0 bottom-0 bg-black/70 p-2">
-              <p className="truncate text-[9px] font-black uppercase tracking-[0.15em] text-purple-300">Preview sincronizado</p>
+              <p className="truncate text-center text-[9px] font-black uppercase tracking-[0.15em] text-purple-300">{isUploadedImage ? "Upload local" : "Imagem atual"}</p>
             </div>
           </>
         ) : (
@@ -269,12 +285,38 @@ function ImageUrlField({ label, variant, value, preview, onChange, placeholder }
             <div className="flex h-9 w-9 items-center justify-center border border-purple-500/30 bg-purple-500/10">
               <ImageIcon size={16} className="text-purple-400/60" />
             </div>
-            <p className="text-center text-[10px] font-black text-slate-500">Informe uma URL publica para visualizar</p>
+            <p className="text-center text-[10px] font-black text-slate-500">Selecionar imagem</p>
           </div>
         )}
-      </div>
-      <div className="mt-3">
-        <TacticalInput label={`${label} URL`} value={value} onChange={onChange} placeholder={placeholder} />
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/gif"
+          className="sr-only"
+          onChange={(event) => {
+            handleFile(event.target.files?.[0]);
+            event.currentTarget.value = "";
+          }}
+        />
+      </label>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <label className="cursor-pointer border border-purple-500/25 bg-purple-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-purple-300 transition-colors hover:border-purple-400/50">
+          {hasPreview ? "Trocar imagem" : "Selecionar imagem"}
+          <input
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+            className="sr-only"
+            onChange={(event) => {
+              handleFile(event.target.files?.[0]);
+              event.currentTarget.value = "";
+            }}
+          />
+        </label>
+        {value && (
+          <button type="button" onClick={() => onChange("")} className="border border-red-500/20 bg-red-500/10 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.15em] text-red-300 transition-colors hover:border-red-400/40">
+            Remover imagem
+          </button>
+        )}
+        <p className="basis-full text-[9px] font-bold text-slate-600">PNG, JPG, WEBP ou GIF ate 5 MB.</p>
       </div>
     </div>
   );
@@ -736,8 +778,8 @@ export function Profile() {
                 <TacticalInput label="Email publico" value={publicForm.public_email || ""} onChange={(value) => setPublicForm({ ...publicForm, public_email: value })} />
                 <TacticalInput label="Localizacao opcional" value={publicForm.location_optional || ""} onChange={(value) => setPublicForm({ ...publicForm, location_optional: value })} />
                 <TacticalInput label="Pronomes" value={publicForm.pronouns || ""} onChange={(value) => setPublicForm({ ...publicForm, pronouns: value })} />
-                <ImageUrlField label="Avatar publico" variant="avatar" value={publicForm.public_avatar_url || ""} preview={publicForm.public_avatar_url || avatarUrl} onChange={(value) => setPublicForm({ ...publicForm, public_avatar_url: value })} placeholder="https://..." />
-                <ImageUrlField label="Banner publico" variant="banner" value={publicForm.public_banner_url || ""} preview={publicForm.public_banner_url || "/assets/tactical-ops-bg.png"} onChange={(value) => setPublicForm({ ...publicForm, public_banner_url: value })} placeholder="https://..." />
+                <ImageUploadField label="Avatar publico" variant="avatar" value={publicForm.public_avatar_url || ""} fallbackPreview={avatarUrl} onChange={(value) => setPublicForm({ ...publicForm, public_avatar_url: value })} />
+                <ImageUploadField label="Banner publico" variant="banner" value={publicForm.public_banner_url || ""} fallbackPreview="/assets/tactical-ops-bg.png" onChange={(value) => setPublicForm({ ...publicForm, public_banner_url: value })} />
                 <div className="md:col-span-2">
                   <TacticalTextarea label="Bio" value={publicForm.bio || ""} onChange={(value) => setPublicForm({ ...publicForm, bio: value })} />
                 </div>

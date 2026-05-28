@@ -2,9 +2,17 @@ import { PublicProfile, PublicProfilePayload } from "../types/api";
 import { assertSafePublicUrl, sanitizeOptionalUrl } from "../utils/safeUrl";
 import { authedApiRequest } from "./api";
 
+const SAFE_IMAGE_DATA_URL = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=]+$/i;
+
+function assertSafeProfileImage(value: string | null | undefined, label: string): void {
+  const trimmed = String(value ?? "").trim();
+  if (!trimmed || SAFE_IMAGE_DATA_URL.test(trimmed)) return;
+  assertSafePublicUrl(trimmed, label);
+}
+
 function validateProfilePayload(data: PublicProfilePayload): PublicProfilePayload {
-  assertSafePublicUrl(data.public_avatar_url, "Avatar publico");
-  assertSafePublicUrl(data.public_banner_url, "Banner publico");
+  assertSafeProfileImage(data.public_avatar_url, "Avatar publico");
+  assertSafeProfileImage(data.public_banner_url, "Banner publico");
 
   return {
     ...data,
