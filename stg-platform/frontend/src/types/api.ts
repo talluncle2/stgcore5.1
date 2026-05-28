@@ -378,6 +378,7 @@ export interface ContentCreator {
   id: string;
   discord_id: string;
   guild_id?: string;
+  profile?: PublicProfile;
   display_name?: string;
   username?: string;
   avatar_url?: string;
@@ -395,6 +396,7 @@ export interface ContentCreator {
   is_verified?: boolean;
   is_active: boolean;
   is_featured: boolean;
+  is_live?: boolean;
   sort_order: number;
   last_checked_at?: string;
   last_check_status?: string;
@@ -402,16 +404,25 @@ export interface ContentCreator {
   updated_at?: string;
   channels: CreatorChannel[];
   latest_content?: CreatorContent[];
+  latest_contents?: CreatorContent[];
 }
 
 export type ContentCreatorPayload = Partial<Omit<ContentCreator, "id" | "channels" | "latest_content" | "created_at" | "updated_at">>;
 export type CreatorChannelPayload = Partial<Omit<CreatorChannel, "id" | "creator_id" | "created_at" | "updated_at" | "last_checked_at">>;
+
+export interface MyCreatorResponse {
+  is_creator: boolean;
+  creator?: ContentCreator | null;
+  channels?: CreatorChannel[];
+  profile?: PublicProfile | null;
+}
 
 export interface PublicProfile {
   id?: string | number;
   discord_id?: string | number;
   username?: string;
   public_name?: string;
+  avatar_url?: string;
   public_avatar_url?: string;
   public_banner_url?: string;
   bio?: string;

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertCircle } from "lucide-react";
 import { setAuthToken } from "../services/api";
+import { getMyCreatorProfile, registerMyCreatorProfile } from "../services/creatorsService";
 import { useAuth } from "../context/AuthContext";
 
 const TOKEN_KEY = "stg_token";
@@ -17,6 +18,7 @@ export function AuthCallback() {
     async function handleCallback() {
       const params = new URLSearchParams(window.location.search);
       const token = params.get("token");
+      const isContentCreator = params.get("is_content_creator") === "true";
       const errorParam = params.get("error") || params.get("error_description");
 
       if (errorParam) {
@@ -50,6 +52,12 @@ export function AuthCallback() {
       setAuthToken(token);
 
       try {
+        if (isContentCreator) {
+          const creator = await getMyCreatorProfile();
+          if (!creator) {
+            await registerMyCreatorProfile();
+          }
+        }
         await refreshUser();
       } catch (err) {
         console.error("Erro ao carregar usuário após login:", err);
