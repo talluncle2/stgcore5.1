@@ -532,8 +532,8 @@ export function Profile() {
   const primaryChannelAvatarUrl = primaryCreatorChannel?.thumbnail_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(primaryChannelName)}&background=111827&color=c084fc`;
   const primaryChannelSyncStatus = getChannelSyncStatus(primaryCreatorChannel);
   const primaryChannelSyncLabel = getChannelSyncLabel(primaryCreatorChannel);
-  const hasRegisteredCreatorChannel = Boolean(primaryCreatorChannel);
-  const showCreatorChannelForm = !loading && !creatorApiError && (!hasRegisteredCreatorChannel || Boolean(editingChannel));
+  const usedPlatforms = visibleCreatorProfile?.channels.filter((channel) => channel.is_active).map((channel) => channel.platform) || [];
+  const showCreatorChannelForm = !loading && !creatorApiError && Boolean(canManageCreator);
 
   useEffect(() => {
     async function load() {
@@ -646,8 +646,9 @@ export function Profile() {
       setChannelForm(emptyChannel);
       return;
     }
-    if (!editingChannel && visibleCreatorProfile?.channels.some((channel) => channel.is_active)) {
-      setError("Voce ja possui uma conta de criador cadastrada. Remova a conta atual antes de adicionar outra.");
+    const samePlatformActiveChannel = !editingChannel && visibleCreatorProfile?.channels.some((channel) => channel.is_active && channel.platform === channelForm.platform);
+    if (samePlatformActiveChannel) {
+      setError("Voce ja possui uma conta cadastrada nesta plataforma. Remova ou edite a conta existente antes de adicionar outra.");
       setChannelForm(emptyChannel);
       return;
     }
@@ -1011,7 +1012,14 @@ export function Profile() {
                   <SectionHeader icon={editingChannel ? LinkIcon : Plus} title={editingChannel ? "Editar Canal" : "Adicionar Canal"} />
                   <div className="grid gap-4 p-5 md:grid-cols-[220px_1fr_auto] md:items-end">
                     <TacticalSelect label="Plataforma" value={channelForm.platform || "youtube"} onChange={(value) => setChannelForm({ ...channelForm, platform: value as CreatorPlatform })}>
-                      {platforms.map((platform) => <option key={platform} value={platform}>{platformLabels[platform] || platform}</option>)}
+                      {platforms.map((platform) => {
+                        const isPlatformTaken = !editingChannel && usedPlatforms.includes(platform);
+                        return (
+                          <option key={platform} value={platform} disabled={isPlatformTaken}>
+                            {platformLabels[platform] || platform}{isPlatformTaken ? " (já cadastrada)" : ""}
+                          </option>
+                        );
+                      })}
                     </TacticalSelect>
                     <TacticalInput label="URL Publica do Canal / Perfil" value={channelForm.channel_url || ""} onChange={(value) => setChannelForm({ ...channelForm, channel_url: value })} placeholder="https://youtube.com/@seucanal" />
                     <div className="flex gap-2">

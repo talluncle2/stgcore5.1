@@ -252,11 +252,11 @@ async def add_my_creator_channel(
         db.refresh(existing)
         return serialize_channel(existing)
 
-    active_channel = next((item for item in creator.channels if item.is_active), None)
-    if active_channel:
+    active_same_platform_channel = next((item for item in creator.channels if item.is_active and item.platform == channel.platform), None)
+    if active_same_platform_channel:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail="Creator account already registered. Edit or remove the current account before adding another.",
+            detail="Creator account already registered for this platform. Edit or remove the current account before adding another.",
         )
 
     db.add(channel)
@@ -280,6 +280,18 @@ async def update_my_creator_channel(
     ).first()
     if not channel:
         raise HTTPException(status_code=404, detail="Channel not found")
+    if payload.platform and payload.platform != channel.platform:
+        duplicate_platform = db.query(CreatorChannel).filter(
+            CreatorChannel.creator_id == creator.id,
+            CreatorChannel.platform == payload.platform,
+            CreatorChannel.is_active == True,
+            CreatorChannel.id != channel.id,
+        ).first()
+        if duplicate_platform:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="You already have an active creator account for this platform. Remove or disable it before changing the platform.",
+            )
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(channel, key, value)
     await sync_channel_public_profile(channel)
