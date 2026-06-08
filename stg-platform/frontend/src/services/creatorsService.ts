@@ -1,13 +1,11 @@
-import { API_BASE_URL, ApiError, authedApiRequest } from "./api";
+import { API_BASE_URL, ApiError, apiRequest, authedApiRequest } from "./api";
 import { ContentCreator, ContentCreatorPayload, CreatorChannel, CreatorChannelPayload, CreatorContent, MyCreatorResponse } from "../types/api";
 import { assertSafePublicUrl, sanitizeOptionalUrl } from "../utils/safeUrl";
 
 async function publicRequest<T>(path: string, fallback: T): Promise<T> {
   if (!API_BASE_URL) return fallback;
   try {
-    const response = await fetch(`${API_BASE_URL}${path}`);
-    if (!response.ok) return fallback;
-    return (await response.json()) as T;
+    return await apiRequest<T>(path);
   } catch {
     return fallback;
   }
@@ -115,6 +113,17 @@ function validateChannelPayload(data: CreatorChannelPayload): CreatorChannelPayl
   };
 }
 
+async function authedApiRequestWithFallback<T>(primaryPath: string, fallbackPath: string, init?: RequestInit): Promise<T> {
+  try {
+    return await authedApiRequest<T>(primaryPath, init);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      return await authedApiRequest<T>(fallbackPath, init);
+    }
+    throw error;
+  }
+}
+
 export async function getCreators(): Promise<ContentCreator[]> {
   return extractCreators(await publicRequest("/creators", { creators: [] }));
 }
@@ -140,7 +149,7 @@ export async function getCreatorById(id: string): Promise<ContentCreator | null>
 
 export async function getMyCreatorProfile(): Promise<ContentCreator | null> {
   try {
-    return extractCreator(await authedApiRequest<ContentCreator | MyCreatorResponse>("/creators/me"));
+    return extractCreator(await authedApiRequestWithFallback<ContentCreator | MyCreatorResponse>("/creators/me", "/creator/me"));
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) {
       return null;
@@ -150,7 +159,15 @@ export async function getMyCreatorProfile(): Promise<ContentCreator | null> {
 }
 
 export async function registerMyCreatorProfile(): Promise<MyCreatorResponse | null> {
-  return await authedApiRequest<MyCreatorResponse>("/creators/me/register", { method: "POST" });
+  try {
+    return await authedApiRequest<MyCreatorResponse>("/creators/me/register", { method: "POST" });
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) {
+      const creator = await getMyCreatorProfile();
+      return creator ? { is_creator: true, creator, channels: creator.channels } : null;
+    }
+    throw error;
+  }
 }
 
 export async function syncMyCreatorProfile(): Promise<ContentCreator | null> {
@@ -158,21 +175,21 @@ export async function syncMyCreatorProfile(): Promise<ContentCreator | null> {
 }
 
 export function addMyCreatorChannel(data: CreatorChannelPayload): Promise<CreatorChannel> {
-  return authedApiRequest("/creators/me/channels", {
+  return authedApiRequestWithFallback("/creators/me/channels", "/creator/me/channels", {
     method: "POST",
     body: JSON.stringify(validateChannelPayload(data)),
   });
 }
 
 export function updateMyCreatorChannel(id: string, data: CreatorChannelPayload): Promise<CreatorChannel> {
-  return authedApiRequest(`/creators/me/channels/${id}`, {
+  return authedApiRequestWithFallback(`/creators/me/channels/${id}`, `/creator/me/channels/${id}`, {
     method: "PUT",
     body: JSON.stringify(validateChannelPayload(data)),
   });
 }
 
 export function disableMyCreatorChannel(id: string): Promise<void> {
-  return authedApiRequest(`/creators/me/channels/${id}`, { method: "DELETE" });
+  return authedApiRequestWithFallback(`/creators/me/channels/${id}`, `/creator/me/channels/${id}`, { method: "DELETE" });
 }
 
 export async function adminGetCreators(): Promise<{ creators: ContentCreator[]; can_manage: boolean }> {

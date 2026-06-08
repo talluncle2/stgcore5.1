@@ -104,8 +104,12 @@ export function hasAdminAccess(user: PermissionUser): boolean {
   if (source.is_admin === true) return true;
 
   return collectValues(user).some((value) =>
-    ["admin", "administrator"].includes(value)
+    ["admin", "administrator", "owner", "super_admin", "superadmin"].includes(value)
   );
+}
+
+export function hasAbsoluteAdminAccess(user: PermissionUser): boolean {
+  return hasAdminAccess(user);
 }
 
 export function hasModeratorAccess(user: PermissionUser): boolean {

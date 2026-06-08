@@ -10,7 +10,6 @@ import {
   Crosshair,
   ExternalLink,
   Eye,
-  EyeOff,
   Flame,
   ImageIcon,
   Link as LinkIcon,
@@ -523,7 +522,7 @@ export function Profile() {
   const isAdmin = hasAdminAccess(identity);
   const username = profile?.username || user?.display_name || user?.username || user?.discord_username || "Operador";
   const avatarUrl = publicForm.public_avatar_url || profile?.avatar_url || user?.avatar_url || user?.discord_avatar_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=a855f7&color=fff`;
-  const visibleCreatorProfile = user ? (creatorProfile || (!creatorApiError && canManageCreator ? createLocalCreatorProfile(user) : null)) : null;
+  const visibleCreatorProfile = user ? (creatorProfile || (canManageCreator ? createLocalCreatorProfile(user) : null)) : null;
   const primaryCreatorChannel = visibleCreatorProfile?.channels.find((channel) => channel.is_active) || visibleCreatorProfile?.channels[0] || null;
   const primaryChannelContent = primaryCreatorChannel
     ? (visibleCreatorProfile?.latest_content || visibleCreatorProfile?.latest_contents || []).filter((content) => content.channel_id === primaryCreatorChannel.id).slice(0, 3)
@@ -931,62 +930,6 @@ export function Profile() {
           </form>
         )}
 
-        {false && activeTab === "resumo" && (
-          <section className="grid gap-4 md:grid-cols-3">
-            <div className="stg-hud-panel p-5"><p className="tactical-label">Discord ID</p><p className="mt-2 break-all font-mono text-sm text-white">{user?.discord_id || profile?.discord_id || "N/A"}</p></div>
-            <div className="stg-hud-panel p-5"><p className="tactical-label">Rank</p><p className="mt-2 text-2xl font-black text-white">{profile?.level}</p></div>
-            <div className="stg-hud-panel p-5"><p className="tactical-label">Coins</p><p className="mt-2 text-2xl font-black text-white">{profile?.coins}</p></div>
-            <div className="stg-hud-panel md:col-span-3 p-5">
-              <p className="tactical-label">Campos protegidos</p>
-              <p className="mt-2 text-sm text-[#94a3b8]">Cargos, Discord ID, flags de admin/moderador/criador e role_ids vêm da API/Discord e nao podem ser alterados pelo site.</p>
-            </div>
-          </section>
-        )}
-
-        {false && (activeTab === "publico" || activeTab === "privacidade") && (
-          <form onSubmit={savePublicProfile} className="stg-hud-panel grid gap-4 p-5 md:grid-cols-2">
-            {activeTab === "publico" ? (
-              <>
-                <ProfileInput label="Nome publico" value={publicForm.public_name || ""} onChange={(value) => setPublicForm({ ...publicForm, public_name: value })} />
-                <ProfileInput label="Email publico" value={publicForm.public_email || ""} onChange={(value) => setPublicForm({ ...publicForm, public_email: value })} />
-                <ProfileInput label="Avatar publico URL" value={publicForm.public_avatar_url || ""} onChange={(value) => setPublicForm({ ...publicForm, public_avatar_url: value })} />
-                <ProfileInput label="Banner publico URL" value={publicForm.public_banner_url || ""} onChange={(value) => setPublicForm({ ...publicForm, public_banner_url: value })} />
-                <ProfileInput label="Localizacao opcional" value={publicForm.location_optional || ""} onChange={(value) => setPublicForm({ ...publicForm, location_optional: value })} />
-                <ProfileInput label="Pronomes" value={publicForm.pronouns || ""} onChange={(value) => setPublicForm({ ...publicForm, pronouns: value })} />
-                <label className="md:col-span-2">
-                  <span className="text-xs font-black uppercase tracking-[0.08em] text-[#94a3b8]">Bio</span>
-                  <textarea value={publicForm.bio || ""} onChange={(e) => setPublicForm({ ...publicForm, bio: e.target.value })} className="mt-2 min-h-28 w-full border border-[#a855f7]/25 bg-black/40 px-3 py-2 text-white outline-none focus:border-[#a855f7]/60" />
-                </label>
-              </>
-            ) : (
-              <>
-                <label>
-                  <span className="text-xs font-black uppercase tracking-[0.08em] text-[#94a3b8]">Visibilidade do perfil</span>
-                  <select value={publicForm.profile_visibility} onChange={(e) => setPublicForm({ ...publicForm, profile_visibility: e.target.value as PublicProfilePayload["profile_visibility"] })} className="mt-2 w-full border border-[#a855f7]/25 bg-black/40 px-3 py-2 text-white">
-                    <option value="public">Publico</option>
-                    <option value="members">Membros</option>
-                    <option value="private">Privado</option>
-                  </select>
-                </label>
-                <ProfileInput label="Orientacao sexual opcional" value={publicForm.sexual_orientation || ""} onChange={(value) => setPublicForm({ ...publicForm, sexual_orientation: value })} />
-                <label>
-                  <span className="text-xs font-black uppercase tracking-[0.08em] text-[#94a3b8]">Visibilidade da orientacao</span>
-                  <select value={publicForm.sexual_orientation_visibility} onChange={(e) => setPublicForm({ ...publicForm, sexual_orientation_visibility: e.target.value as PublicProfilePayload["sexual_orientation_visibility"] })} className="mt-2 w-full border border-[#a855f7]/25 bg-black/40 px-3 py-2 text-white">
-                    <option value="private">Privada</option>
-                    <option value="public">Publica</option>
-                  </select>
-                </label>
-                <div className="stg-hud-panel md:col-span-2 p-4">
-                  <p className="flex items-center gap-2 text-sm font-bold text-[#94a3b8]"><EyeOff size={16} /> Email publico so sera exibido quando a API considerar o campo publico.</p>
-                </div>
-              </>
-            )}
-            <button type="submit" disabled={saving || loading} className="stg-button-primary md:col-span-2 inline-flex items-center justify-center gap-2 disabled:opacity-50">
-              {saving ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />} Salvar perfil
-            </button>
-          </form>
-        )}
-
         {activeTab === "criador" && canManageCreator && (
           <section className="space-y-5">
             {creatorApiError && (
@@ -1200,7 +1143,7 @@ export function Profile() {
   );
 }
 
-function ProfileInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+export function ProfileInput({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   return (
     <label>
       <span className="text-xs font-black uppercase tracking-[0.08em] text-[#94a3b8]">{label}</span>

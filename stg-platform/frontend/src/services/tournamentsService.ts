@@ -1,5 +1,5 @@
 import { authedApiRequest, getTournaments } from "./api";
-import { deleteContent, readContent, upsertContent } from "./contentStorage";
+import { readContent } from "./contentStorage";
 import { assertAdmin } from "./adminGuard";
 import { AuthUser, Tournament, TournamentItem, TournamentPayload } from "../types/api";
 
@@ -68,6 +68,32 @@ export async function deleteTournament(tournamentId: string | number, currentUse
   });
 }
 
+export function registerForTournament(tournamentId: string | number, payload?: Record<string, unknown>) {
+  return authedApiRequest(`/tournaments/${tournamentId}/register`, {
+    method: "POST",
+    body: JSON.stringify(payload ?? {}),
+  });
+}
+
+export function submitTournamentPaymentProof(tournamentId: string | number, payload: Record<string, unknown>) {
+  return authedApiRequest(`/tournaments/${tournamentId}/payment-proof`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getTournamentRegistrations(tournamentId: string | number) {
+  return authedApiRequest(`/admin/tournaments/${tournamentId}/registrations`);
+}
+
+export function approveTournamentRegistration(registrationId: string | number) {
+  return authedApiRequest(`/admin/tournament-registrations/${registrationId}/approve`, { method: "PUT" });
+}
+
+export function rejectTournamentRegistration(registrationId: string | number) {
+  return authedApiRequest(`/admin/tournament-registrations/${registrationId}/reject`, { method: "PUT" });
+}
+
 export function tournamentToTournamentItem(tournament: Tournament): TournamentItem {
   const id = String(tournament.tournament_id || tournament.id || tournament.code);
   return {
@@ -101,24 +127,13 @@ export async function getFeaturedTournamentItems(): Promise<TournamentItem[]> {
 }
 
 export async function saveTournamentItem(payload: Partial<TournamentItem> & { id?: string }): Promise<TournamentItem> {
-  try {
-    const path = payload.id ? `/admin/tournaments/${payload.id}` : "/admin/tournaments";
-    return await authedApiRequest<TournamentItem>(path, {
-      method: payload.id ? "PUT" : "POST",
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    // TODO: replace local fallback when Replit API exposes tournament content management.
-  }
-  return upsertContent<TournamentItem>(KEY, defaultTournamentItems, payload);
+  const path = payload.id ? `/admin/tournaments/${payload.id}` : "/admin/tournaments";
+  return authedApiRequest<TournamentItem>(path, {
+    method: payload.id ? "PUT" : "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function deleteTournamentItem(id: string): Promise<void> {
-  try {
-    await authedApiRequest<void>(`/admin/tournaments/${id}`, { method: "DELETE" });
-    return;
-  } catch {
-    // TODO: replace local fallback when Replit API exposes /admin/tournaments/:id.
-  }
-  deleteContent<TournamentItem>(KEY, defaultTournamentItems, id);
+  await authedApiRequest<void>(`/admin/tournaments/${id}`, { method: "DELETE" });
 }

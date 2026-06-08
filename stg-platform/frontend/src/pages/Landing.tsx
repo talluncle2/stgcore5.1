@@ -123,7 +123,7 @@ export function Landing() {
               <p className="text-xs font-bold uppercase tracking-[0.14em] text-white/45">OPERACAO ATIVA</p>
               <div className="mt-1 flex items-center justify-between">
                 <h2 className="text-2xl font-black uppercase tracking-[0.08em] text-[#a855f7]">
-                  {homeContent?.seasonTitle || "TEMPORADA 2024"}
+                  {homeContent?.seasonTitle || "TEMPORADA ATUAL"}
                 </h2>
                 <Trophy className="text-[#c084fc]" size={21} />
               </div>

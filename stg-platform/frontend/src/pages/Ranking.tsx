@@ -3,6 +3,7 @@ import { Medal, Search } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { RankingCard } from "../components/cards/RankingCard";
 import { getRankingItems, rankingItemToEntry } from "../services/rankingService";
+import { API_BASE_URL } from "../services/api";
 import { RankingEntry, RankingItem } from "../types/api";
 
 export function Ranking() {
@@ -65,6 +66,12 @@ export function Ranking() {
             <p className="text-[#94a3b8]">Veja a posicao de todos os operadores da comunidade</p>
           </div>
         </div>
+
+        {!API_BASE_URL && (
+          <div className="border border-[#f97316]/30 bg-[#f97316]/10 p-3 text-sm font-bold text-[#fed7aa]">
+            Modo demonstracao: configure VITE_API_BASE_URL para carregar o ranking oficial da API Replit.
+          </div>
+        )}
 
         <div className="relative">
           <Search className="absolute left-4 top-3 text-[#94a3b8]" size={20} />

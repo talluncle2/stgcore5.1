@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { StatCard } from "../components/cards/StatCard";
-import { getHealth } from "../services/api";
+import { ApiError, getHealth } from "../services/api";
 import {
   getDiscordGuild,
   getDiscordMetrics,
@@ -61,31 +61,56 @@ export function Dashboard() {
   const [botStatus, setBotStatus] = useState<BotStatus | null>(null);
   const [guild, setGuild] = useState<GuildInfo | null>(null);
   const [metricsCount, setMetricsCount] = useState(0);
+  const [endpointWarnings, setEndpointWarnings] = useState<Record<string, string>>({});
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
-    try {
-      setError(null);
-      const [healthData, statusData, guildData, metricsData] = await Promise.all([
-        getHealth(),
-        getDiscordStatus(),
-        getDiscordGuild(),
-        getDiscordMetrics(),
-      ]);
+    setError(null);
+    const warnings: Record<string, string> = {};
 
-      setApiOnline(healthData.status === "online");
-      setBotStatus(statusData as BotStatus | null);
-      setGuild(guildData as GuildInfo | null);
-      setMetricsCount(metricsData?.metrics?.length ?? 0);
-    } catch (err) {
-      console.error("Error loading dashboard data:", err);
-      setError("Nao foi possivel carregar os dados administrativos da API.");
-    } finally {
-      setRefreshing(false);
-      setLoading(false);
+    const [healthResult, statusResult, guildResult, metricsResult] = await Promise.allSettled([
+      getHealth(),
+      getDiscordStatus(),
+      getDiscordGuild(),
+      getDiscordMetrics(),
+    ]);
+
+    if (healthResult.status === "fulfilled") {
+      setApiOnline(healthResult.value.status === "online");
+    } else {
+      setApiOnline(false);
+      warnings.health = "GET /health indisponivel.";
     }
+
+    if (statusResult.status === "fulfilled") {
+      setBotStatus(statusResult.value as BotStatus | null);
+      if (!statusResult.value) warnings.status = "Endpoint nao disponivel na API do Replit: /admin/discord/status";
+    } else {
+      warnings.status = statusResult.reason instanceof ApiError ? statusResult.reason.message : "Endpoint nao disponivel na API do Replit: /admin/discord/status";
+    }
+
+    if (guildResult.status === "fulfilled") {
+      setGuild(guildResult.value as GuildInfo | null);
+      if (!guildResult.value) warnings.guild = "Endpoint nao disponivel na API do Replit: /admin/discord/guild";
+    } else {
+      warnings.guild = guildResult.reason instanceof ApiError ? guildResult.reason.message : "Endpoint nao disponivel na API do Replit: /admin/discord/guild";
+    }
+
+    if (metricsResult.status === "fulfilled") {
+      setMetricsCount(metricsResult.value?.metrics?.length ?? 0);
+      if (!metricsResult.value) warnings.metrics = "Endpoint nao disponivel na API do Replit: /admin/discord/metrics";
+    } else {
+      warnings.metrics = metricsResult.reason instanceof ApiError ? metricsResult.reason.message : "Endpoint nao disponivel na API do Replit: /admin/discord/metrics";
+    }
+
+    setEndpointWarnings(warnings);
+    if (Object.keys(warnings).length > 0) {
+      setError("Alguns cards administrativos dependem de endpoints ainda nao disponiveis na API do Replit.");
+    }
+    setRefreshing(false);
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -168,9 +193,18 @@ export function Dashboard() {
         </div>
 
         {error && (
-          <div className="flex items-center gap-3 border border-[#f97316]/35 bg-[#f97316]/10 p-4 text-[#fed7aa]">
-            <AlertCircle size={20} />
-            <span className="text-sm font-bold">{error}</span>
+          <div className="flex items-start gap-3 border border-[#f97316]/35 bg-[#f97316]/10 p-4 text-[#fed7aa]">
+            <AlertCircle className="mt-0.5 shrink-0" size={20} />
+            <div>
+              <span className="text-sm font-bold">{error}</span>
+              {Object.values(endpointWarnings).length > 0 && (
+                <ul className="mt-2 space-y-1 text-xs text-[#fdba74]">
+                  {Object.values(endpointWarnings).map((warning) => (
+                    <li key={warning}>{warning}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
           </div>
         )}
 

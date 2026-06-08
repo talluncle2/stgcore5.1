@@ -88,7 +88,12 @@ export function Login() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4" aria-disabled="true">
+            <div className="rounded border border-[#f97316]/30 bg-[#f97316]/10 p-3 text-sm font-bold text-[#fed7aa]">
+              Acesso por email ainda nao habilitado. Use Discord.
+            </div>
+
+            <fieldset disabled className="space-y-4 opacity-45">
             <div>
               <label className="tactical-label block mb-2">Email</label>
               <div className="relative">
@@ -119,7 +124,7 @@ export function Login() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled
               className="stg-button-secondary w-full flex items-center justify-center gap-2 mt-6"
             >
               {loading ? (
@@ -136,6 +141,7 @@ export function Login() {
                 </>
               )}
             </button>
+            </fieldset>
           </form>
 
           <div className="mt-6 pt-6 border-t border-[#7c3aed]/20 text-center text-sm text-[#94a3b8]">

@@ -1,5 +1,5 @@
 import { authedApiRequest, getProducts } from "./api";
-import { deleteContent, readContent, upsertContent } from "./contentStorage";
+import { readContent } from "./contentStorage";
 import { assertAdmin } from "./adminGuard";
 import { AuthUser, Product, ProductPayload, StoreItem } from "../types/api";
 
@@ -86,6 +86,24 @@ export async function deleteProduct(productId: string | number, currentUser: Aut
   });
 }
 
+export function createCheckoutSession(payload: { product_id: string | number; quantity?: number }) {
+  return authedApiRequest<{ checkout_url?: string; order_id?: string }>("/checkout/create", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function createOrder(payload: { product_id: string | number; quantity?: number }) {
+  return authedApiRequest<{ order_id: string }>("/orders", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function getMyOrders() {
+  return authedApiRequest<unknown[]>("/orders/me");
+}
+
 export function productToStoreItem(product: Product): StoreItem {
   const id = String(product.product_id || product.id || product.name);
   return {
@@ -123,24 +141,13 @@ export async function getFeaturedStoreItems(): Promise<StoreItem[]> {
 }
 
 export async function saveStoreItem(payload: Partial<StoreItem> & { id?: string }): Promise<StoreItem> {
-  try {
-    const path = payload.id ? `/admin/products/${payload.id}` : "/admin/products";
-    return await authedApiRequest<StoreItem>(path, {
-      method: payload.id ? "PUT" : "POST",
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    // TODO: replace local fallback when Replit API exposes product content management.
-  }
-  return upsertContent<StoreItem>(KEY, defaultStoreItems, payload);
+  const path = payload.id ? `/admin/products/${payload.id}` : "/admin/products";
+  return authedApiRequest<StoreItem>(path, {
+    method: payload.id ? "PUT" : "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function deleteStoreItem(id: string): Promise<void> {
-  try {
-    await authedApiRequest<void>(`/admin/products/${id}`, { method: "DELETE" });
-    return;
-  } catch {
-    // TODO: replace local fallback when Replit API exposes /admin/products/:id.
-  }
-  deleteContent<StoreItem>(KEY, defaultStoreItems, id);
+  await authedApiRequest<void>(`/admin/products/${id}`, { method: "DELETE" });
 }

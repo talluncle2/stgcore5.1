@@ -2,6 +2,91 @@ import { authedApiRequest } from "./api";
 import { assertAdmin } from "./adminGuard";
 import { AdminSettings, AuthUser, DiscordMetrics } from "../types/api";
 
+export type DiscordGuildInfo = {
+  guild_id?: string | number;
+  guild_name?: string;
+  icon_url?: string;
+  owner_id?: string | number;
+  member_count?: number;
+  human_members?: number;
+  bot_members?: number;
+  online_members?: number;
+  channels_total?: number;
+  text_channels?: number;
+  voice_channels?: number;
+  roles_count?: number;
+  emojis?: number;
+  boosts?: number;
+  premium_tier?: number;
+  latency_ms?: number;
+  uptime_seconds?: number;
+  last_sync_at?: string;
+};
+
+export type DiscordMember = {
+  id?: string | number;
+  guild_id?: string | number;
+  discord_id: string | number;
+  user_id?: string | number;
+  username?: string;
+  discord_username?: string;
+  global_name?: string;
+  display_name?: string;
+  nick?: string;
+  avatar_url?: string;
+  joined_at?: string;
+  role_ids?: Array<string | number>;
+  roles_json?: Array<{ id?: string | number; name?: string }> | Record<string, unknown>;
+  is_bot?: boolean;
+  status?: string;
+  is_admin?: boolean;
+  is_moderator?: boolean;
+  can_access_dashboard?: boolean;
+  is_content_creator?: boolean;
+  last_discord_sync_at?: string;
+  xp?: number;
+  level?: number;
+  coins?: number;
+};
+
+export type DiscordRole = {
+  id?: string | number;
+  guild_id?: string | number;
+  role_id: string | number;
+  name: string;
+  color?: string;
+  position?: number;
+  permissions?: string[];
+  mentionable?: boolean;
+  last_sync_at?: string;
+};
+
+export type DiscordChannel = {
+  id?: string | number;
+  guild_id?: string | number;
+  channel_id: string | number;
+  name: string;
+  type?: string;
+  position?: number;
+  category_id?: string | number;
+  nsfw?: boolean;
+  last_sync_at?: string;
+};
+
+export type DiscordEvent = {
+  id?: string | number;
+  event_type?: string;
+  discord_id?: string | number;
+  channel_id?: string | number;
+  payload_json?: Record<string, unknown>;
+  created_at?: string;
+};
+
+export type DiscordStats = {
+  guild_found: boolean;
+  stats: Record<string, unknown>;
+};
+
 /**
  * Get Discord Bot Status
  */
@@ -17,9 +102,9 @@ export async function getDiscordStatus(): Promise<DiscordMetrics | null> {
 /**
  * Get Discord Metrics
  */
-export async function getDiscordMetrics(): Promise<{ metrics: any[] } | null> {
+export async function getDiscordMetrics(): Promise<{ metrics: Record<string, unknown>[] } | null> {
   try {
-    return await authedApiRequest<{ metrics: any[] }>("/admin/discord/metrics");
+    return await authedApiRequest<{ metrics: Record<string, unknown>[] }>("/admin/discord/metrics");
   } catch (error) {
     console.error("Failed to fetch Discord metrics:", error);
     return null;
@@ -29,9 +114,9 @@ export async function getDiscordMetrics(): Promise<{ metrics: any[] } | null> {
 /**
  * Get Guild Information
  */
-export async function getDiscordGuild(): Promise<any | null> {
+export async function getDiscordGuild(): Promise<DiscordGuildInfo | null> {
   try {
-    return await authedApiRequest<any>("/admin/discord/guild");
+    return await authedApiRequest<DiscordGuildInfo>("/admin/discord/guild");
   } catch (error) {
     console.error("Failed to fetch guild:", error);
     return null;
@@ -49,7 +134,7 @@ export async function getDiscordMembers(
     limit?: number;
     offset?: number;
   }
-): Promise<any[] | null> {
+): Promise<DiscordMember[] | null> {
   try {
     const params = new URLSearchParams();
     if (options?.is_admin !== undefined) params.append("is_admin", String(options.is_admin));
@@ -59,7 +144,7 @@ export async function getDiscordMembers(
     if (options?.offset) params.append("offset", String(options.offset));
 
     const query = params.toString() ? `?${params.toString()}` : "";
-    return await authedApiRequest<any[]>(`/admin/discord/members${query}`);
+    return await authedApiRequest<DiscordMember[]>(`/admin/discord/members${query}`);
   } catch (error) {
     console.error("Failed to fetch members:", error);
     return null;
@@ -69,9 +154,9 @@ export async function getDiscordMembers(
 /**
  * Get Specific Discord Member
  */
-export async function getDiscordMember(discord_id: number): Promise<any | null> {
+export async function getDiscordMember(discord_id: number): Promise<DiscordMember | null> {
   try {
-    return await authedApiRequest<any>(`/admin/discord/members/${discord_id}`);
+    return await authedApiRequest<DiscordMember>(`/admin/discord/members/${discord_id}`);
   } catch (error) {
     console.error(`Failed to fetch member ${discord_id}:`, error);
     return null;
@@ -81,14 +166,14 @@ export async function getDiscordMember(discord_id: number): Promise<any | null> 
 /**
  * Get Discord Roles
  */
-export async function getDiscordRoles(options?: { limit?: number; offset?: number }): Promise<any[] | null> {
+export async function getDiscordRoles(options?: { limit?: number; offset?: number }): Promise<DiscordRole[] | null> {
   try {
     const params = new URLSearchParams();
     if (options?.limit) params.append("limit", String(options.limit));
     if (options?.offset) params.append("offset", String(options.offset));
 
     const query = params.toString() ? `?${params.toString()}` : "";
-    return await authedApiRequest<any[]>(`/admin/discord/roles${query}`);
+    return await authedApiRequest<DiscordRole[]>(`/admin/discord/roles${query}`);
   } catch (error) {
     console.error("Failed to fetch roles:", error);
     return null;
@@ -98,9 +183,9 @@ export async function getDiscordRoles(options?: { limit?: number; offset?: numbe
 /**
  * Get Specific Discord Role
  */
-export async function getDiscordRole(role_id: number): Promise<any | null> {
+export async function getDiscordRole(role_id: number): Promise<DiscordRole | null> {
   try {
-    return await authedApiRequest<any>(`/admin/discord/roles/${role_id}`);
+    return await authedApiRequest<DiscordRole>(`/admin/discord/roles/${role_id}`);
   } catch (error) {
     console.error(`Failed to fetch role ${role_id}:`, error);
     return null;
@@ -110,14 +195,14 @@ export async function getDiscordRole(role_id: number): Promise<any | null> {
 /**
  * Get Discord Channels
  */
-export async function getDiscordChannels(options?: { limit?: number; offset?: number }): Promise<any[] | null> {
+export async function getDiscordChannels(options?: { limit?: number; offset?: number }): Promise<DiscordChannel[] | null> {
   try {
     const params = new URLSearchParams();
     if (options?.limit) params.append("limit", String(options.limit));
     if (options?.offset) params.append("offset", String(options.offset));
 
     const query = params.toString() ? `?${params.toString()}` : "";
-    return await authedApiRequest<any[]>(`/admin/discord/channels${query}`);
+    return await authedApiRequest<DiscordChannel[]>(`/admin/discord/channels${query}`);
   } catch (error) {
     console.error("Failed to fetch channels:", error);
     return null;
@@ -127,9 +212,9 @@ export async function getDiscordChannels(options?: { limit?: number; offset?: nu
 /**
  * Get Specific Discord Channel
  */
-export async function getDiscordChannel(channel_id: number): Promise<any | null> {
+export async function getDiscordChannel(channel_id: number): Promise<DiscordChannel | null> {
   try {
-    return await authedApiRequest<any>(`/admin/discord/channels/${channel_id}`);
+    return await authedApiRequest<DiscordChannel>(`/admin/discord/channels/${channel_id}`);
   } catch (error) {
     console.error(`Failed to fetch channel ${channel_id}:`, error);
     return null;
@@ -143,7 +228,7 @@ export async function getDiscordEvents(options?: {
   event_type?: string;
   limit?: number;
   offset?: number;
-}): Promise<{ events: any[] } | null> {
+}): Promise<{ events: DiscordEvent[] } | null> {
   try {
     const params = new URLSearchParams();
     if (options?.event_type) params.append("event_type", options.event_type);
@@ -151,7 +236,7 @@ export async function getDiscordEvents(options?: {
     if (options?.offset) params.append("offset", String(options.offset));
 
     const query = params.toString() ? `?${params.toString()}` : "";
-    return await authedApiRequest<{ events: any[] }>(`/admin/discord/events${query}`);
+    return await authedApiRequest<{ events: DiscordEvent[] }>(`/admin/discord/events${query}`);
   } catch (error) {
     console.error("Failed to fetch events:", error);
     return null;
@@ -161,9 +246,9 @@ export async function getDiscordEvents(options?: {
 /**
  * Get Discord Statistics
  */
-export async function getDiscordStats(): Promise<{ guild_found: boolean; stats: any } | null> {
+export async function getDiscordStats(): Promise<DiscordStats | null> {
   try {
-    return await authedApiRequest<{ guild_found: boolean; stats: any }>("/admin/discord/stats");
+    return await authedApiRequest<DiscordStats>("/admin/discord/stats");
   } catch (error) {
     console.error("Failed to fetch Discord stats:", error);
     return null;

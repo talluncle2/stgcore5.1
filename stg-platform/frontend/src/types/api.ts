@@ -6,6 +6,11 @@ export interface RankingEntry {
   xp: number;
   level: number;
   coins?: number;
+  wins?: number;
+  losses?: number;
+  kills?: number;
+  deaths?: number;
+  kd?: number;
 }
 
 export interface Tournament {
@@ -296,11 +301,11 @@ export interface RankingItem {
   avatarUrl?: string;
   position: number;
   points: number;
-  wins: number;
-  losses: number;
-  kills: number;
-  deaths: number;
-  kd: number;
+  wins?: number;
+  losses?: number;
+  kills?: number;
+  deaths?: number;
+  kd?: number;
   level: number;
   badge?: string;
   isActive: boolean;

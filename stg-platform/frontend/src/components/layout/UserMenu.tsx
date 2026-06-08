@@ -3,14 +3,13 @@ import { useNavigate } from "react-router-dom";
 import {
   Gauge,
   LogOut,
-  Settings,
   ShieldCheck,
   ShoppingCart,
   Trophy,
   User as UserIcon,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-import { hasAdminAccess, hasDashboardAccess, hasModeratorAccess, hasSettingsAccess } from "../../utils/permissions";
+import { hasAbsoluteAdminAccess, hasDashboardAccess, hasModeratorAccess } from "../../utils/permissions";
 
 export function UserMenu() {
   const { user, profile, signOut } = useAuth();
@@ -42,9 +41,8 @@ export function UserMenu() {
 
   const identity = user ?? profile;
   const canOpenDashboard = hasDashboardAccess(identity);
-  const canOpenAdmin = hasAdminAccess(identity);
+  const canOpenAdmin = hasAbsoluteAdminAccess(identity);
   const canOpenModeration = hasModeratorAccess(identity);
-  const canOpenSettings = hasSettingsAccess(identity);
 
   const username =
     profile?.username ||
@@ -124,6 +122,16 @@ export function UserMenu() {
               </>
             )}
 
+            {canOpenAdmin && (
+              <button
+                onClick={() => handleNavigate("/admin")}
+                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-black uppercase tracking-[0.04em] text-[#f97316] transition-colors hover:bg-[#f97316]/10"
+              >
+                <ShieldCheck size={16} />
+                Painel Admin
+              </button>
+            )}
+
             {canOpenModeration && (
               <button
                 onClick={() => handleNavigate("/moderation")}
@@ -131,16 +139,6 @@ export function UserMenu() {
               >
                 <ShieldCheck size={16} />
                 Painel Moderador
-              </button>
-            )}
-
-            {canOpenSettings && (
-              <button
-                onClick={() => handleNavigate(canOpenAdmin ? "/configuracoes?tab=criadores" : "/configuracoes?tab=loja")}
-                className="flex w-full items-center gap-3 px-4 py-2.5 text-sm font-black uppercase tracking-[0.04em] text-[#c084fc] transition-colors hover:bg-[#a855f7]/12"
-              >
-                <Settings size={16} />
-                {canOpenAdmin ? "Admin Criadores" : "Configuracoes"}
               </button>
             )}
 

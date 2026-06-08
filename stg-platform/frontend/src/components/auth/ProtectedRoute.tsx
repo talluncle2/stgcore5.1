@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { hasAdminAccess, hasDashboardAccess, hasModeratorAccess } from "../../utils/permissions";
+import { hasAbsoluteAdminAccess, hasDashboardAccess, hasModeratorAccess } from "../../utils/permissions";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -42,7 +42,7 @@ export function ProtectedRoute({
     return <Navigate to="/login" replace />;
   }
 
-  if (requireAdmin && !hasAdminAccess(user ?? profile)) {
+  if (requireAdmin && !hasAbsoluteAdminAccess(user ?? profile)) {
     return <Navigate to="/" replace />;
   }
 
@@ -50,7 +50,7 @@ export function ProtectedRoute({
     return <Navigate to="/" replace />;
   }
 
-  if (requiredRole === "admin" && !hasAdminAccess(user ?? profile)) {
+  if (requiredRole === "admin" && !hasAbsoluteAdminAccess(user ?? profile)) {
     return <Navigate to="/" replace />;
   }
 

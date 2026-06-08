@@ -2,7 +2,23 @@
 
 Frontend React/Vite do STG | Supremo Tribunal Gamer.
 
-## Rodar localmente
+## Estrutura
+
+- `src/pages`: telas publicas, perfil, dashboard e configuracoes.
+- `src/components`: layout, UI, cards e componentes administrativos.
+- `src/context/AuthContext.tsx`: sessao Discord baseada no token da API Replit.
+- `src/services`: clientes HTTP para a API oficial.
+- `src/utils`: permissoes e validacao de URLs.
+- `docs`: contrato da API e guia de deploy.
+
+## Arquitetura
+
+O frontend fala somente com a API oficial do Replit via `VITE_API_BASE_URL`.
+Supabase, bot Discord/Discloud, service role keys, tokens e secrets ficam no backend/API, nunca no frontend.
+
+Leituras publicas podem exibir modo demonstracao quando a API estiver ausente. Acoes administrativas de salvar, editar e excluir exigem confirmacao da API do Replit e nao gravam localStorage como se fosse oficial.
+
+## Rodar Local
 
 ```bash
 cd stg-platform/frontend
@@ -10,79 +26,42 @@ npm install
 npm run dev
 ```
 
-## Build
+## Validar
 
 ```bash
-cd stg-platform/frontend
+npm run typecheck
+npm run lint
 npm run build
 ```
 
-## Variaveis de ambiente
+## Variaveis
 
-Criar `frontend/.env` local:
+Crie `.env` local a partir de `.env.example`:
 
 ```env
 VITE_API_BASE_URL=https://URL-DA-API-REPLIT
+VITE_DISCORD_INVITE_URL=https://discord.gg/SEU_CONVITE
 VITE_REQUIRE_AUTH=false
+VITE_ALLOWED_HOSTS=
 ```
 
-Nao coloque secrets no frontend. Tokens e chaves de backend nao pertencem a este projeto.
-Sem `VITE_API_BASE_URL`, o frontend usa apenas caminhos relativos e os dados administrativos caem no fallback local isolado quando a API nao responde.
-O sistema de criadores nao usa fallback local para cadastro/sincronia: ele exige a API Replit ativa em `VITE_API_BASE_URL`.
+Nao coloque secrets no frontend.
 
-## Deploy na Vercel
+## Deploy Vercel
 
-1. Subir o projeto para GitHub.
-2. Importar o repositorio na Vercel.
-3. Configurar Root Directory como:
+Configure o projeto na Vercel com:
 
 ```text
-stg-platform/frontend
-```
-
-4. Configurar:
-
-```text
+Root Directory: stg-platform/frontend
 Framework Preset: Vite
+Install Command: npm install
 Build Command: npm run build
 Output Directory: dist
-Install Command: npm install
 ```
 
-5. Adicionar Environment Variables:
+Configure `VITE_API_BASE_URL` apontando para a API do Replit.
 
-```env
-VITE_API_BASE_URL=https://URL-DA-API-REPLIT
-VITE_REQUIRE_AUTH=false
-```
+## Endpoints
 
-6. Fazer deploy.
-
-## Observacao
-
-O frontend nao contem backend, bot ou API. A API e o bot rodam no Replit. O frontend consome apenas a API configurada por `VITE_API_BASE_URL`.
-
-## Criadores
-
-O cadastro em `/perfil?tab=criador` chama a API FastAPI hospedada no Replit. A API sincroniza dados publicos reais da plataforma cadastrada e grava o resultado em `creator_channels` e `creator_content`.
-
-Variaveis necessarias no backend/Replit:
-
-```env
-YOUTUBE_API_KEY=...
-TWITCH_CLIENT_ID=...
-TWITCH_CLIENT_SECRET=...
-CORS_ORIGINS=https://seu-frontend.com
-```
-
-## Paginas de conteudo
-
-- `/noticias`: central publica com 3 hero carrosseis para anuncios, temporadas/torneios e novidades.
-- `/admin/noticias` ou `/configuracoes/noticias`: gestao de noticias e banners.
-- `/admin/loja` ou `/configuracoes/loja`: gestao de itens da loja, precos em STG Coins/BRL e descontos.
-- `/admin/torneios` ou `/configuracoes/torneios`: gestao de torneios/campeonatos.
-- `/admin/home` ou `/configuracoes/home`: gestao do hero principal da Home/Landing.
-- `/admin/ranking` ou `/configuracoes/ranking`: gestao manual/fallback do ranking.
-
-As paginas de gestao exigem admin, moderador ou `can_access_dashboard`. Enquanto endpoints administrativos reais nao estiverem disponiveis na API Replit, os services usam fallback em `localStorage`.
-Criacao e edicao abrem em modal centralizado. Imagens podem ser carregadas do dispositivo e ficam salvas como data URL no fallback local ate existir upload real na API.
+O contrato esperado esta em [docs/API_CONTRACT.md](docs/API_CONTRACT.md).
+O guia de deploy da arquitetura completa esta em [docs/DEPLOY.md](docs/DEPLOY.md).

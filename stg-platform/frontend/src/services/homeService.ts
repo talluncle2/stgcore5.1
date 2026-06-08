@@ -1,5 +1,5 @@
 import { apiRequest, authedApiRequest } from "./api";
-import { deleteContent, readContent, upsertContent } from "./contentStorage";
+import { readContent } from "./contentStorage";
 import { HomeContentItem } from "../types/api";
 
 const KEY = "home";
@@ -15,7 +15,7 @@ export const defaultHomeItems: HomeContentItem[] = [
     primaryLabel: "VER TORNEIOS",
     primaryUrl: "/torneios",
     secondaryLabel: "ENTRAR NA ARENA",
-    seasonTitle: "TEMPORADA 2024",
+    seasonTitle: "TEMPORADA ATUAL",
     missionTitle: "Venca 5 partidas ranqueadas",
     missionProgress: "3 / 5",
     isActive: true,
@@ -55,24 +55,13 @@ export async function getActiveHomeContent(): Promise<HomeContentItem> {
 }
 
 export async function saveHomeContentItem(payload: Partial<HomeContentItem> & { id?: string }): Promise<HomeContentItem> {
-  try {
-    const path = payload.id ? `/admin/home/${payload.id}` : "/admin/home";
-    return await authedApiRequest<HomeContentItem>(path, {
-      method: payload.id ? "PUT" : "POST",
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    // TODO: replace local fallback when Replit API exposes /admin/home.
-  }
-  return upsertContent<HomeContentItem>(KEY, defaultHomeItems, payload);
+  const path = payload.id ? `/admin/home/${payload.id}` : "/admin/home";
+  return authedApiRequest<HomeContentItem>(path, {
+    method: payload.id ? "PUT" : "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function deleteHomeContentItem(id: string): Promise<void> {
-  try {
-    await authedApiRequest<void>(`/admin/home/${id}`, { method: "DELETE" });
-    return;
-  } catch {
-    // TODO: replace local fallback when Replit API exposes /admin/home/:id.
-  }
-  deleteContent<HomeContentItem>(KEY, defaultHomeItems, id);
+  await authedApiRequest<void>(`/admin/home/${id}`, { method: "DELETE" });
 }

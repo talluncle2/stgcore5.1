@@ -1,6 +1,6 @@
 import './App.css';
 import { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Landing } from './pages/Landing';
@@ -112,15 +112,15 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute requireDashboardAccess>
-                <Navigate to="/configuracoes?tab=membros" replace />
+              <ProtectedRoute requireAdmin>
+                <Settings />
               </ProtectedRoute>
             }
           />
           <Route
             path="/admin/:section"
             element={
-              <ProtectedRoute requireDashboardAccess>
+              <ProtectedRoute requireAdmin>
                 <ContentManagerPage />
               </ProtectedRoute>
             }
@@ -136,7 +136,7 @@ function App() {
           <Route
             path="/moderation"
             element={
-              <ProtectedRoute requireDashboardAccess>
+              <ProtectedRoute requiredRole="moderator">
                 <Moderation />
               </ProtectedRoute>
             }

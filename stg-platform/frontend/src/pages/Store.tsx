@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Filter, Package, ShoppingCart } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { getStoreItems } from "../services/storeService";
+import { API_BASE_URL } from "../services/api";
 import { StoreItem } from "../types/api";
 
 function formatBrl(value?: number) {
@@ -51,6 +52,12 @@ export function Store() {
             <p className="text-[#94a3b8]">Itens com economia hibrida em STG Coins e BRL.</p>
           </div>
         </div>
+
+        {!API_BASE_URL && (
+          <div className="border border-[#f97316]/30 bg-[#f97316]/10 p-3 text-sm font-bold text-[#fed7aa]">
+            Modo demonstracao: configure VITE_API_BASE_URL para carregar a loja oficial da API Replit.
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {categories.map((cat) => (
@@ -146,11 +153,11 @@ export function Store() {
 
                     <button
                       disabled
-                      title="Checkout aguardando backend"
+                      title="Checkout indisponivel: aguardando POST /checkout/create na API"
                       className="tactical-edge flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-lg border border-[#1e293b] bg-[#111827] px-4 py-2 font-black uppercase tracking-[0.06em] text-[#64748b]"
                     >
                       <Package size={16} />
-                      Compra aguardando backend
+                      Checkout indisponivel — aguardando endpoint da API
                     </button>
                   </div>
                 </div>

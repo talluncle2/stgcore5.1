@@ -14,6 +14,8 @@ __pycache__/
 .local/
 docs/archive/
 *.zip
+stg-platform/Visual-Layout-Updatezip/
+stg-platform/api-replit(copia)/
 
 .DS_Store
 npm-debug.log*

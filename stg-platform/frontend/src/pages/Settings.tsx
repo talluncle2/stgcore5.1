@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Activity,
   AlertCircle,
   Bot,
   CheckCircle2,
   Crown,
+  FileText,
+  Gauge,
+  Home,
   RefreshCw,
   Server,
   Shield,
@@ -28,7 +31,7 @@ import { SettingsSidebar, SettingsNavItem } from "../components/settings/Setting
 import { SettingsStatusBadge } from "../components/settings/SettingsStatusBadge";
 import { SettingsTabHeader } from "../components/settings/SettingsTabHeader";
 import { useAuth } from "../context/AuthContext";
-import { hasAdminAccess } from "../utils/permissions";
+import { hasAbsoluteAdminAccess } from "../utils/permissions";
 import {
   API_BASE_URL,
   buildApiUrl,
@@ -143,6 +146,9 @@ const checks = [
 ];
 
 const settingsTabs: SettingsNavItem[] = [
+  { id: "admin", label: "Central Admin", description: "Acesso absoluto", icon: Shield, adminOnly: true },
+  { id: "home", label: "Home/Landing", description: "Hero e destaques", icon: Home },
+  { id: "noticias", label: "Noticias", description: "Comunicados oficiais", icon: FileText },
   { id: "loja", label: "Gestao de Loja", description: "Produtos e economia", icon: ShoppingCart },
   { id: "ranking", label: "Gestao de Ranking", description: "Placares e jogadores", icon: Crown },
   { id: "campeonatos", label: "Gestao de Campeonatos", description: "Torneios e temporadas", icon: Trophy },
@@ -225,7 +231,7 @@ function ContentManagementTab({
       icon: Activity,
       eyebrow: "Landing",
       title: "Gestao da Home",
-      description: "Banners proprios da pagina inicial e destaques visuais, com fallback localStorage.",
+      description: "Banners proprios da pagina inicial e destaques visuais publicados pela API oficial.",
       body: <HomeManager />,
     },
   }[type];
@@ -239,8 +245,8 @@ function ContentManagementTab({
           <p className="mt-3 text-sm text-[#94a3b8]">Criacao e edicao abrem em modal/card, sem formulario fixo ocupando a pagina.</p>
         </SettingsSectionCard>
         <SettingsSectionCard>
-          <SettingsStatusBadge tone="green">Upload local</SettingsStatusBadge>
-          <p className="mt-3 text-sm text-[#94a3b8]">Imagens usam upload com preview e fallback data URL enquanto a API nao tiver upload real.</p>
+          <SettingsStatusBadge tone="green">API oficial</SettingsStatusBadge>
+          <p className="mt-3 text-sm text-[#94a3b8]">Salvar, editar e excluir dependem de confirmacao da API do Replit.</p>
         </SettingsSectionCard>
         <SettingsSectionCard>
           <SettingsStatusBadge tone="blue">Acoes agrupadas</SettingsStatusBadge>
@@ -629,11 +635,132 @@ function BotTab() {
   );
 }
 
+function AdminCentralTab() {
+  const navigate = useNavigate();
+  const [apiStatus, setApiStatus] = useState<"online" | "offline">("offline");
+  const [botStatus, setBotStatus] = useState<"online" | "offline" | "unavailable">("unavailable");
+  const [loadingStatus, setLoadingStatus] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadStatus() {
+      const [healthResult, botResult] = await Promise.allSettled([getHealth(), getDiscordStatus()]);
+      if (!mounted) return;
+
+      if (healthResult.status === "fulfilled") {
+        setApiStatus(healthResult.value.status === "online" ? "online" : "offline");
+      } else {
+        setApiStatus("offline");
+      }
+
+      if (botResult.status === "fulfilled" && botResult.value) {
+        const botPayload = botResult.value as { status?: unknown; bot_online?: unknown };
+        const rawStatus = String(botPayload.status ?? "");
+        const online = botPayload.bot_online === true || rawStatus.toLowerCase() === "online";
+        setBotStatus(online ? "online" : "offline");
+      } else {
+        setBotStatus("unavailable");
+      }
+
+      setLoadingStatus(false);
+    }
+
+    void loadStatus();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const cards = [
+    { title: "Home/Landing", description: "Hero, temporada atual e destaques da pagina inicial.", icon: Home, to: "/configuracoes?tab=home", tone: "purple" as const, status: "API oficial" },
+    { title: "Noticias", description: "Comunicados, novidades e banners editoriais.", icon: FileText, to: "/configuracoes?tab=noticias", tone: "blue" as const, status: "Conteudo" },
+    { title: "Loja", description: "Produtos, precos, estoque e destaques comerciais.", icon: ShoppingCart, to: "/configuracoes?tab=loja", tone: "green" as const, status: "Produtos" },
+    { title: "Torneios", description: "Campeonatos, temporadas e inscricoes.", icon: Trophy, to: "/configuracoes?tab=campeonatos", tone: "orange" as const, status: "Competitivo" },
+    { title: "Ranking", description: "Placares, operadores e estatisticas reais da API.", icon: Crown, to: "/configuracoes?tab=ranking", tone: "purple" as const, status: "Ranking" },
+    { title: "Criadores", description: "Canais, lives e conteudo de criadores STG.", icon: Video, to: "/configuracoes?tab=criadores", tone: "blue" as const, status: "Criadores" },
+    { title: "Membros", description: "Usuarios sincronizados, cargos e permissoes.", icon: Users, to: "/configuracoes?tab=membros", tone: "green" as const, status: "Discord" },
+    { title: "Cargos", description: "Roles sincronizadas e leitura operacional.", icon: ShieldCheck, to: "/configuracoes?tab=cargos", tone: "purple" as const, status: "Roles" },
+    { title: "API", description: "Diagnosticos da API oficial hospedada no Replit.", icon: Server, to: "/configuracoes?tab=api", tone: apiStatus === "online" ? "green" as const : "red" as const, status: loadingStatus ? "Validando" : apiStatus },
+    { title: "Bot", description: "Status do bot Discloud e sincronizacao Discord.", icon: Bot, to: "/configuracoes?tab=bot", tone: botStatus === "online" ? "green" as const : botStatus === "offline" ? "red" as const : "orange" as const, status: loadingStatus ? "Validando" : botStatus === "unavailable" ? "Endpoint indisponivel" : botStatus },
+    { title: "Moderacao", description: "Punicoes, regras e configuracoes de moderacao.", icon: Shield, to: "/moderation", tone: "orange" as const, status: "Restrito" },
+    { title: "Diagnosticos", description: "Saude da API, contratos e verificacoes de integracao.", icon: Gauge, to: "/configuracoes?tab=api", tone: apiStatus === "online" ? "green" as const : "red" as const, status: "Sistema" },
+  ];
+
+  return (
+    <div className="space-y-5">
+      <SettingsTabHeader
+        icon={Shield}
+        eyebrow="Comando central"
+        title="Central Admin"
+        description="Acesso absoluto as areas administrativas do STG. Todas as acoes oficiais passam pela API Replit."
+      />
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <SettingsSectionCard>
+          <SettingsStatusBadge tone={apiStatus === "online" ? "green" : "red"}>
+            API {loadingStatus ? "validando" : apiStatus}
+          </SettingsStatusBadge>
+          <p className="mt-3 text-sm text-[#94a3b8]">Fonte oficial: Replit conectado ao Supabase.</p>
+        </SettingsSectionCard>
+        <SettingsSectionCard>
+          <SettingsStatusBadge tone={botStatus === "online" ? "green" : botStatus === "offline" ? "red" : "orange"}>
+            Bot {loadingStatus ? "validando" : botStatus === "unavailable" ? "indisponivel" : botStatus}
+          </SettingsStatusBadge>
+          <p className="mt-3 text-sm text-[#94a3b8]">Status via endpoint administrativo seguro.</p>
+        </SettingsSectionCard>
+        <SettingsSectionCard>
+          <SettingsStatusBadge tone="purple">Admin absoluto</SettingsStatusBadge>
+          <p className="mt-3 text-sm text-[#94a3b8]">Moderadores e staff nao recebem acesso total sem cargo admin.</p>
+        </SettingsSectionCard>
+      </div>
+
+      {apiStatus === "offline" && !loadingStatus && (
+        <div className="border border-[#f97316]/35 bg-[#f97316]/10 p-4 text-sm font-bold text-[#fed7aa]">
+          API offline ou nao configurada. O painel continua navegavel, mas salvamentos administrativos exigem confirmacao da API Replit.
+        </div>
+      )}
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {cards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <SettingsSectionCard key={card.title} className="h-full">
+              <div className="flex h-full flex-col gap-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-3">
+                    <div className="tactical-edge grid size-11 shrink-0 place-items-center border border-[#a855f7]/35 bg-[#a855f7]/15 text-[#c084fc]">
+                      <Icon size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="text-base font-black uppercase tracking-[0.06em] text-white">{card.title}</h3>
+                      <p className="mt-1 text-sm text-[#94a3b8]">{card.description}</p>
+                    </div>
+                  </div>
+                  <SettingsStatusBadge tone={card.tone}>{card.status}</SettingsStatusBadge>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(card.to)}
+                  className="stg-button-primary mt-auto inline-flex w-full items-center justify-center gap-2"
+                >
+                  Gerenciar
+                </button>
+              </div>
+            </SettingsSectionCard>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const { user, profile } = useAuth();
-  const isAdmin = hasAdminAccess(user ?? profile);
-  const activeTab = searchParams.get("tab") || "loja";
+  const isAdmin = hasAbsoluteAdminAccess(user ?? profile);
+  const activeTab = searchParams.get("tab") || (location.pathname === "/admin" ? "admin" : "loja");
   const activeConfig = settingsTabs.find((tab) => tab.id === activeTab);
 
   const setActiveTab = (tab: string) => {
@@ -642,6 +769,7 @@ export function Settings() {
 
   const renderTab = () => {
     if (activeConfig?.adminOnly && !isAdmin) return <RestrictedTab />;
+    if (activeTab === "admin") return isAdmin ? <AdminCentralTab /> : <RestrictedTab />;
     if (activeTab === "loja") return <ContentManagementTab type="loja" />;
     if (activeTab === "ranking") return <ContentManagementTab type="ranking" />;
     if (activeTab === "campeonatos") return <ContentManagementTab type="campeonatos" />;

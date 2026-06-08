@@ -9,6 +9,7 @@ expertMode = true
 
 [userenv.development]
 VITE_REQUIRE_AUTH = "false"
+VITE_API_BASE_URL = "http://localhost:8000"
 
 [userenv.shared]
 VITE_SUPABASE_URL = "https://dczcobkcxnlclypahbod.supabase.co"
@@ -16,7 +17,7 @@ VITE_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhY
 
 [userenv.production]
 VITE_REQUIRE_AUTH = "false"
-VITE_API_BASE_URL = ""
+VITE_API_BASE_URL = "https://stgcore-40--lizmaciel159.replit.app"
 
 [workflows]
 runButton = "Project"
@@ -44,8 +45,8 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run dev"
-waitForPort = 5000
+args = "cd frontend && npm run dev"
+waitForPort = 3000
 
 [workflows.workflow.metadata]
 outputType = "webview"
@@ -56,7 +57,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -m uvicorn core.main:app --host 0.0.0.0 --port 8000 --reload"
+args = "cd ../backend && python -m uvicorn core.main:app --host 0.0.0.0 --port 8000 --reload"
 waitForPort = 8000
 
 [workflows.workflow.metadata]
@@ -68,18 +69,14 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python bot/main.py"
+args = "cd .. && if [ -d bot ]; then python bot/main.py; else echo 'Bot Discord nao encontrado; pulando.'; fi"
 
 [workflows.workflow.metadata]
 outputType = "console"
 
 [[ports]]
-localPort = 5000
+localPort = 3000
 externalPort = 80
-
-[[ports]]
-localPort = 5001
-externalPort = 3000
 
 [[ports]]
 localPort = 8000
@@ -87,6 +84,6 @@ externalPort = 8000
 
 [deployment]
 deploymentTarget = "autoscale"
-build = ["npm", "run", "build"]
-publicDir = "dist"
-run = ["node", "server.js"]
+build = ["sh", "-c", "cd frontend && npm install && npm run build"]
+publicDir = "frontend/dist"
+run = ["sh", "-c", "cd frontend && node server.js"]

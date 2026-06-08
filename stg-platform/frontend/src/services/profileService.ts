@@ -2,11 +2,12 @@ import { PublicProfile, PublicProfilePayload } from "../types/api";
 import { assertSafePublicUrl, sanitizeOptionalUrl } from "../utils/safeUrl";
 import { authedApiRequest } from "./api";
 
-const SAFE_IMAGE_DATA_URL = /^data:image\/(png|jpeg|jpg|webp|gif);base64,[a-z0-9+/=]+$/i;
-
 function assertSafeProfileImage(value: string | null | undefined, label: string): void {
   const trimmed = String(value ?? "").trim();
-  if (!trimmed || SAFE_IMAGE_DATA_URL.test(trimmed)) return;
+  if (!trimmed) return;
+  if (trimmed.toLowerCase().startsWith("data:")) {
+    throw new Error(`${label} precisa ser enviado pela API de upload antes de salvar o perfil.`);
+  }
   assertSafePublicUrl(trimmed, label);
 }
 
@@ -39,5 +40,25 @@ export function updateMyPublicProfile(data: PublicProfilePayload): Promise<Publi
   return authedApiRequest("/profile/me", {
     method: "PUT",
     body: JSON.stringify(validateProfilePayload(data)),
+  });
+}
+
+export function uploadProfileImage(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return authedApiRequest("/uploads/profile-image", {
+    method: "POST",
+    body: formData,
+    headers: {},
+  });
+}
+
+export function uploadBannerImage(file: File): Promise<{ url: string }> {
+  const formData = new FormData();
+  formData.append("file", file);
+  return authedApiRequest("/uploads/banner-image", {
+    method: "POST",
+    body: formData,
+    headers: {},
   });
 }

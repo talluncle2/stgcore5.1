@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Calendar, Filter, Trophy } from "lucide-react";
 import { Layout } from "../components/layout/Layout";
 import { getTournamentItems } from "../services/tournamentsService";
+import { API_BASE_URL } from "../services/api";
 import { TournamentItem } from "../types/api";
 
 function formatDate(value?: string) {
@@ -21,6 +22,16 @@ function statusClass(value?: string) {
     return "stg-badge-warning";
   }
   return "stg-badge-info";
+}
+
+function registrationLabel(value?: string) {
+  const normalized = String(value || "").toLowerCase();
+  if (["ativo", "aprovado", "inscricoes_abertas", "em_andamento"].includes(normalized)) {
+    return "Inscricao aguardando endpoint /tournaments/:id/register";
+  }
+  if (["em_breve", "pendente"].includes(normalized)) return "Inscricoes em breve";
+  if (["encerrado", "rejeitado", "cancelado"].includes(normalized)) return "Inscricoes encerradas";
+  return "Aguardando backend de inscricoes";
 }
 
 export function Tournaments() {
@@ -60,6 +71,12 @@ export function Tournaments() {
             <p className="text-[#94a3b8]">Acompanhe temporadas, torneios e chamadas competitivas da STG.</p>
           </div>
         </div>
+
+        {!API_BASE_URL && (
+          <div className="border border-[#f97316]/30 bg-[#f97316]/10 p-3 text-sm font-bold text-[#fed7aa]">
+            Modo demonstracao: configure VITE_API_BASE_URL para carregar campeonatos oficiais da API Replit.
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-2">
           {statusOptions.map((value) => (
@@ -125,8 +142,8 @@ export function Tournaments() {
                   </div>
 
                   <div className="mt-6 border-t border-[#a855f7]/20 pt-4">
-                    <button disabled title="Inscricoes aguardando backend" className="w-full cursor-not-allowed border border-[#2d3748] bg-[#111827] px-4 py-2 text-sm font-black uppercase text-[#64748b]">
-                      Inscricoes aguardando backend
+                    <button disabled title="Fluxo real depende da API do Replit" className="w-full cursor-not-allowed border border-[#2d3748] bg-[#111827] px-4 py-2 text-sm font-black uppercase text-[#64748b]">
+                      {registrationLabel(tournament.status)}
                     </button>
                   </div>
                 </div>
@@ -137,7 +154,7 @@ export function Tournaments() {
           <div className="stg-hud-panel p-12 text-center">
             <Trophy className="mx-auto mb-3 text-[#94a3b8]" size={48} />
             <p className="text-[#94a3b8]">Modulo de campeonatos aguardando conteudo ativo.</p>
-            <p className="mt-2 text-xs text-[#64748b]">Torneios criados na gestao aparecem aqui via API ou fallback local.</p>
+            <p className="mt-2 text-xs text-[#64748b]">Torneios oficiais aparecem aqui quando a API do Replit retornar conteudo ativo.</p>
           </div>
         )}
       </div>

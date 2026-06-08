@@ -14,6 +14,15 @@ const API_BASE_URL = rawApiBaseUrl
   ? String(rawApiBaseUrl).replace(/\/$/, "")
   : "";
 const AUTH_TOKEN_KEY = "stg_auth_token";
+const LEGACY_AUTH_TOKEN_KEYS = ["stg_token", "token", "authToken"];
+
+export type DataSourceStatus = "api" | "demo" | "offline" | "permission_error";
+
+export interface SourcedData<T> {
+  data: T;
+  source: DataSourceStatus;
+  message?: string;
+}
 
 function buildUrl(path: string): string {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
@@ -34,16 +43,53 @@ export function setAuthToken(token: string): void {
 
 export function clearAuthToken(): void {
   localStorage.removeItem(AUTH_TOKEN_KEY);
+  LEGACY_AUTH_TOKEN_KEYS.forEach((key) => localStorage.removeItem(key));
 }
 
 export class ApiError extends Error {
   status?: number;
+  endpoint?: string;
 
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, endpoint?: string) {
     super(message);
     this.name = "ApiError";
     this.status = status;
+    this.endpoint = endpoint;
   }
+}
+
+function normalizeApiResponse<T>(payload: unknown): T {
+  if (payload && typeof payload === "object") {
+    const record = payload as Record<string, unknown>;
+    if ("success" in record && record.success === false) {
+      const message = record.message ?? record.error ?? "A API retornou erro ao processar a solicitacao.";
+      throw new ApiError(String(message));
+    }
+    if ("data" in record) return record.data as T;
+  }
+  return payload as T;
+}
+
+function endpointUnavailableMessage(path: string, status?: number): string {
+  if (status === 401) return "Sessao expirada ou token invalido. Faca login novamente.";
+  if (status === 403) return "Sem permissao para executar esta acao.";
+  if (status === 404) return `Endpoint ainda nao disponivel na API do Replit: ${path}`;
+  if (status && status >= 500) return "API do Replit indisponivel no momento.";
+  return "Nao foi possivel sincronizar com a API.";
+}
+
+async function readErrorMessage(response: Response, path: string): Promise<string> {
+  const errorText = await response.text().catch(() => "");
+  if (errorText) {
+    try {
+      const parsed = JSON.parse(errorText) as { detail?: unknown; message?: unknown; error?: unknown };
+      const parsedMessage = parsed.detail ?? parsed.message ?? parsed.error;
+      if (typeof parsedMessage === "string") return parsedMessage;
+    } catch {
+      return errorText;
+    }
+  }
+  return endpointUnavailableMessage(path, response.status);
 }
 
 async function fetchJson<T>(path: string, init?: RequestInit, fallback?: T): Promise<T> {
@@ -55,7 +101,7 @@ async function fetchJson<T>(path: string, init?: RequestInit, fallback?: T): Pro
     const response = await fetch(buildUrl(path), {
       ...init,
       headers: {
-        "Content-Type": "application/json",
+        ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         ...(init?.headers ?? {}),
       },
     });
@@ -64,7 +110,7 @@ async function fetchJson<T>(path: string, init?: RequestInit, fallback?: T): Pro
       return fallback as T;
     }
 
-    return (await response.json()) as T;
+    return normalizeApiResponse<T>(await response.json());
   } catch (error) {
     console.error(`API request failed: ${path}`, error);
     return fallback as T;
@@ -73,50 +119,40 @@ async function fetchJson<T>(path: string, init?: RequestInit, fallback?: T): Pro
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_BASE_URL) {
-    throw new ApiError("VITE_API_BASE_URL nao esta configurado.");
+    throw new ApiError("VITE_API_BASE_URL nao esta configurado. Configure a URL da API oficial no Vercel.", undefined, path);
   }
 
   try {
     const response = await fetch(buildUrl(path), {
       ...init,
       headers: {
-        "Content-Type": "application/json",
+        ...(init?.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
         ...(init?.headers ?? {}),
       },
     });
 
     if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      let message = errorText || "Nao foi possivel sincronizar com a API.";
-      if (errorText) {
-        try {
-          const parsed = JSON.parse(errorText) as { detail?: unknown; message?: unknown; error?: unknown };
-          const parsedMessage = parsed.detail ?? parsed.message ?? parsed.error;
-          if (typeof parsedMessage === "string") {
-            message = parsedMessage;
-          }
-        } catch {
-          // Keep the original response text when it is not JSON.
-        }
+      if (response.status === 401) {
+        clearAuthToken();
       }
-      throw new ApiError(message, response.status);
+      throw new ApiError(await readErrorMessage(response, path), response.status, path);
     }
 
     if (response.status === 204) {
       return undefined as T;
     }
 
-    return (await response.json()) as T;
+    return normalizeApiResponse<T>(await response.json());
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    throw new ApiError("Nao foi possivel sincronizar com a API.");
+    throw new ApiError("API do Replit offline ou sem resposta.", undefined, path);
   }
 }
 
 export async function authedApiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   const token = getAuthToken();
   if (!token) {
-    throw new ApiError("Voce precisa estar autenticado para executar esta acao.", 401);
+    throw new ApiError("Voce precisa estar autenticado para executar esta acao.", 401, path);
   }
 
   return apiRequest<T>(path, {
@@ -126,6 +162,18 @@ export async function authedApiRequest<T>(path: string, init?: RequestInit): Pro
       ...(init?.headers ?? {}),
     },
   });
+}
+
+export function adminEndpointUnavailable(path: string): ApiError {
+  return new ApiError(`Endpoint ainda nao disponivel na API do Replit: ${path}`, 404, path);
+}
+
+export function classifyApiError(error: unknown): DataSourceStatus {
+  if (error instanceof ApiError) {
+    if (error.status === 401 || error.status === 403) return "permission_error";
+    return "offline";
+  }
+  return "offline";
 }
 
 async function fetchAuthedJson<T>(path: string, fallback: T): Promise<T> {
@@ -151,7 +199,7 @@ async function fetchAuthedJson<T>(path: string, fallback: T): Promise<T> {
       return fallback;
     }
 
-    return (await response.json()) as T;
+    return normalizeApiResponse<T>(await response.json());
   } catch (error) {
     if (import.meta.env.DEV) {
       console.error(`Authenticated API request failed: ${path}`, error);
