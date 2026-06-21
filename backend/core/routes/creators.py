@@ -1,5 +1,6 @@
 """Content creator routes."""
 from datetime import datetime, timedelta, timezone
+import secrets
 from urllib.parse import urlparse, urlunparse
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy.orm import Session, joinedload
@@ -432,8 +433,16 @@ async def internal_check_content(
     x_bot_api_key: str | None = Header(None),
     db: Session = Depends(get_db),
 ):
-    valid_internal = settings.INTERNAL_SYNC_KEY and x_internal_sync_key == settings.INTERNAL_SYNC_KEY
-    valid_bot = settings.BOT_API_KEY and x_bot_api_key == settings.BOT_API_KEY
+    valid_internal = bool(
+        settings.INTERNAL_SYNC_KEY
+        and x_internal_sync_key
+        and secrets.compare_digest(x_internal_sync_key, settings.INTERNAL_SYNC_KEY)
+    )
+    valid_bot = bool(
+        settings.BOT_API_KEY
+        and x_bot_api_key
+        and secrets.compare_digest(x_bot_api_key, settings.BOT_API_KEY)
+    )
     if not (valid_internal or valid_bot):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid sync key")
     return await check_creator_content(db)

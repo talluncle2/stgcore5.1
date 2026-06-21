@@ -3,6 +3,7 @@ import {
   WarzoneMetrics,
   WarzoneOperation,
   WarzoneOperationResult,
+  WarzoneOperatorEventStat,
   WarzoneParticipation,
 } from "../types/warzone";
 
@@ -33,6 +34,7 @@ type WarzoneOperationRow = {
   is_featured: boolean;
   priority: number;
   result?: WarzoneOperationResult | null;
+  season_id?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -152,6 +154,7 @@ function rowToOperation(row: WarzoneOperationRow): WarzoneOperation {
     isFeatured: row.is_featured,
     priority: row.priority,
     result: row.result || undefined,
+    seasonId: row.season_id || undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -182,6 +185,7 @@ function operationToRow(payload: Partial<WarzoneOperation>) {
     is_featured: payload.isFeatured === true,
     priority: payload.priority ?? 0,
     result: payload.result ?? null,
+    season_id: payload.seasonId || null,
   };
 }
 
@@ -318,10 +322,28 @@ export async function getWarzoneParticipations(discordId?: string): Promise<Warz
 
 export async function closeWarzoneOperation(
   operationId: string,
-  result: Omit<WarzoneOperationResult, "closedAt">
+  result: Omit<WarzoneOperationResult, "closedAt">,
+  operatorStats: WarzoneOperatorEventStat[] = []
 ): Promise<WarzoneOperation> {
   const current = (await getWarzoneOperations()).find((operation) => operation.id === operationId);
   if (!current) throw new Error("Operacao Warzone nao encontrada.");
+
+  if (isSupabaseEnabled && supabase) {
+    const { data, error } = await supabase.rpc("close_warzone_operation", {
+      p_operation_id: operationId,
+      p_winner_clan_tag: result.winnerClan.trim().toUpperCase(),
+      p_mvp_name: result.mvp.trim(),
+      p_total_kills: result.totalKills,
+      p_matches_played: result.matchesPlayed,
+      p_final_standings: result.finalStandings,
+      p_admin_notes: result.adminNotes || null,
+      p_operator_stats: operatorStats,
+    });
+
+    if (error) throw new Error(`Falha ao encerrar a operacao: ${error.message}`);
+    return rowToOperation(data as WarzoneOperationRow);
+  }
+
   return saveWarzoneOperation({
     ...current,
     id: operationId,

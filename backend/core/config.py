@@ -28,7 +28,7 @@ class Settings:
     # API
     BOT_API_KEY: str = os.getenv("BOT_API_KEY", "")
     INTERNAL_SYNC_KEY: str = os.getenv("INTERNAL_SYNC_KEY", "")
-    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
+    JWT_SECRET_KEY: str = os.getenv("JWT_SECRET_KEY", "")
     SUPABASE_JWT_SECRET: str = os.getenv("SUPABASE_JWT_SECRET", JWT_SECRET_KEY)
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 24

@@ -37,6 +37,83 @@ export interface WarzoneOperationResult {
   closedAt: string;
 }
 
+export type WarzonePlatform =
+  | "battle_net"
+  | "playstation"
+  | "xbox"
+  | "steam"
+  | "other";
+
+export interface WarzoneSeason {
+  id: string;
+  name: string;
+  slug: string;
+  startsAt?: string;
+  endsAt?: string;
+  isActive: boolean;
+}
+
+export interface WarzoneClan {
+  id: string;
+  name: string;
+  tag: string;
+  logoUrl?: string;
+  leaderDiscordId?: string;
+  description?: string;
+  participations: number;
+  wins: number;
+  titles: number;
+  kills: number;
+  rankingPoints: number;
+  isActive: boolean;
+}
+
+export interface WarzoneOperator {
+  id: string;
+  profileId?: string;
+  discordId?: string;
+  nickname: string;
+  activisionId?: string;
+  platform?: WarzonePlatform;
+  clanId?: string;
+  clanTag?: string;
+  kd: number;
+  participations: number;
+  wins: number;
+  kills: number;
+  mvpCount: number;
+  rankingPoints: number;
+  isActive: boolean;
+}
+
+export interface WarzoneOperatorEventStat {
+  operatorId?: string;
+  discordId?: string;
+  placement?: number;
+  kills: number;
+  isMvp?: boolean;
+}
+
+export type WarzoneHallOfFameCategory =
+  | "champion"
+  | "mvp"
+  | "record_holder"
+  | "elite_operator"
+  | "champion_clan";
+
+export interface WarzoneHallOfFameEntry {
+  id: string;
+  category: WarzoneHallOfFameCategory;
+  operationId?: string;
+  operatorId?: string;
+  clanId?: string;
+  title: string;
+  description?: string;
+  metrics: Record<string, unknown>;
+  isFeatured: boolean;
+  awardedAt: string;
+}
+
 export interface WarzoneOperation {
   id: string;
   title: string;
@@ -60,6 +137,7 @@ export interface WarzoneOperation {
   isFeatured: boolean;
   priority: number;
   result?: WarzoneOperationResult;
+  seasonId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -78,4 +156,61 @@ export interface WarzoneMetrics {
   clanWins: Array<{ clan: string; wins: number }>;
   ranking: Array<{ clan: string; points: number; wins: number; kills: number }>;
   history: WarzoneOperation[];
+}
+
+export interface WarzoneGeneralStats {
+  eventsCompleted: number;
+  operatorsRegistered: number;
+  clansRegistered: number;
+  killsRegistered: number;
+  matchesRegistered: number;
+  victoriesRegistered: number;
+  mvpsRegistered: number;
+}
+
+export interface WarzoneOperatorRankingEntry
+  extends Pick<
+    WarzoneOperator,
+    | "id"
+    | "nickname"
+    | "platform"
+    | "clanTag"
+    | "participations"
+    | "wins"
+    | "kills"
+    | "mvpCount"
+    | "kd"
+    | "rankingPoints"
+  > {
+  position: number;
+}
+
+export interface WarzoneClanRankingEntry
+  extends Pick<
+    WarzoneClan,
+    | "id"
+    | "name"
+    | "tag"
+    | "logoUrl"
+    | "participations"
+    | "wins"
+    | "titles"
+    | "kills"
+    | "rankingPoints"
+  > {
+  position: number;
+}
+
+export interface WarzonePeriodMetric {
+  period: string;
+  events: number;
+  kills: number;
+  matches: number;
+}
+
+export interface WarzoneSeasonMetric {
+  seasonId: string;
+  season: string;
+  events: number;
+  kills: number;
 }

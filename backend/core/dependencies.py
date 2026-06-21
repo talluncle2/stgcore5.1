@@ -1,6 +1,7 @@
 """Authentication and Authorization Dependencies"""
 from datetime import datetime, timedelta, timezone
 from typing import Optional
+import secrets
 import jwt
 from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthCredentials
@@ -16,6 +17,9 @@ security = HTTPBearer()
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create JWT access token"""
+    if not settings.SUPABASE_JWT_SECRET:
+        raise RuntimeError("SUPABASE_JWT_SECRET is required to issue access tokens")
+
     to_encode = data.copy()
     
     if expires_delta:
@@ -29,6 +33,12 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 def decode_access_token(token: str) -> dict:
     """Decode JWT access token"""
+    if not settings.SUPABASE_JWT_SECRET:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Authentication signing key is not configured"
+        )
+
     try:
         payload = jwt.decode(token, settings.SUPABASE_JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
         return payload
@@ -45,7 +55,7 @@ def decode_access_token(token: str) -> dict:
 
 def verify_bot_api_key(x_bot_api_key: str = Header(...)) -> bool:
     """Verify bot API key from header"""
-    if x_bot_api_key != settings.BOT_API_KEY:
+    if not settings.BOT_API_KEY or not secrets.compare_digest(x_bot_api_key, settings.BOT_API_KEY):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid API key"

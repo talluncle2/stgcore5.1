@@ -1,7 +1,7 @@
 """Bot Sync Routes - Receive data from Discord bot and save to Supabase"""
 from datetime import datetime, timezone
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, status, Header
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
 from core.database import get_db
@@ -19,15 +19,6 @@ from core.dependencies import verify_bot_api_key
 
 router = APIRouter(prefix="/bot/sync", tags=["bot-sync"])
 settings = get_settings()
-
-def verify_api_key(x_bot_api_key: str = Header(...)) -> bool:
-    """Verify bot API key"""
-    if x_bot_api_key != settings.BOT_API_KEY:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Invalid bot API key"
-        )
-    return True
 
 def calculate_member_permissions(member_request: BotSyncMemberRequest, db: Session) -> tuple:
     """Calculate member permissions from configured Discord role IDs."""
@@ -58,7 +49,7 @@ def calculate_member_permissions(member_request: BotSyncMemberRequest, db: Sessi
 async def sync_guild(
     request: BotSyncGuildRequest,
     db: Session = Depends(get_db),
-    verified: bool = Depends(verify_api_key)
+    verified: bool = Depends(verify_bot_api_key)
 ):
     """Sync guild information from bot"""
     try:
@@ -124,7 +115,7 @@ async def sync_guild(
 async def sync_member(
     request: BotSyncMemberRequest,
     db: Session = Depends(get_db),
-    verified: bool = Depends(verify_api_key)
+    verified: bool = Depends(verify_bot_api_key)
 ):
     """Sync single member from bot"""
     try:
@@ -191,7 +182,7 @@ async def sync_member(
 async def sync_members(
     request: BotSyncMembersRequest,
     db: Session = Depends(get_db),
-    verified: bool = Depends(verify_api_key)
+    verified: bool = Depends(verify_bot_api_key)
 ):
     """Sync multiple members from bot (bulk operation)"""
     try:
@@ -261,7 +252,7 @@ async def sync_members(
 async def sync_roles(
     request: BotSyncRolesRequest,
     db: Session = Depends(get_db),
-    verified: bool = Depends(verify_api_key)
+    verified: bool = Depends(verify_bot_api_key)
 ):
     """Sync roles from bot"""
     try:
@@ -305,7 +296,7 @@ async def sync_roles(
 async def sync_channels(
     request: BotSyncChannelsRequest,
     db: Session = Depends(get_db),
-    verified: bool = Depends(verify_api_key)
+    verified: bool = Depends(verify_bot_api_key)
 ):
     """Sync channels from bot"""
     try:
@@ -349,7 +340,7 @@ async def sync_channels(
 async def sync_metrics(
     request: BotSyncMetricsRequest,
     db: Session = Depends(get_db),
-    verified: bool = Depends(verify_api_key)
+    verified: bool = Depends(verify_bot_api_key)
 ):
     """Sync metrics from bot"""
     try:
@@ -375,7 +366,7 @@ async def sync_metrics(
 async def sync_status(
     request: BotSyncStatusRequest,
     db: Session = Depends(get_db),
-    verified: bool = Depends(verify_api_key)
+    verified: bool = Depends(verify_bot_api_key)
 ):
     """Sync bot status from bot"""
     try:
@@ -407,7 +398,7 @@ async def sync_status(
 async def sync_event(
     request: BotSyncEventRequest,
     db: Session = Depends(get_db),
-    verified: bool = Depends(verify_api_key)
+    verified: bool = Depends(verify_bot_api_key)
 ):
     """Sync event from bot"""
     try:
@@ -433,7 +424,7 @@ async def sync_event(
 async def sync_message_event(
     request: BotSyncEventRequest,
     db: Session = Depends(get_db),
-    verified: bool = Depends(verify_api_key)
+    verified: bool = Depends(verify_bot_api_key)
 ):
     """Sync message event from bot"""
     # Alias for /events
@@ -443,7 +434,7 @@ async def sync_message_event(
 async def sync_voice(
     request: dict,
     db: Session = Depends(get_db),
-    verified: bool = Depends(verify_api_key)
+    verified: bool = Depends(verify_bot_api_key)
 ):
     """Sync voice event from bot"""
     try:
