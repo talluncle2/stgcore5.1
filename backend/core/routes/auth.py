@@ -10,6 +10,7 @@ from core.config import get_settings
 from core.models import User, DiscordMember
 from core.schemas import AuthUser, AuthResponse
 from core.dependencies import get_current_user, create_access_token
+from core.discord_identity import extract_clan_tag
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 settings = get_settings()
@@ -140,12 +141,21 @@ async def process_discord_code(code: str, db: Session) -> AuthResponse:
             elif member.can_access_dashboard:
                 role = "staff"
         
+        clan_tag = extract_clan_tag(member)
         token_data = {
-            "discord_id": discord_id,
+            "sub": str(user.id),
+            "discord_id": str(discord_id),
             "user_id": user.id,
             "username": discord_username,
             "email": email,
-            "role": role
+            # Supabase PostgREST requires a database role claim.
+            "role": "authenticated",
+            "app_role": role,
+            "is_admin": member.is_admin if member else False,
+            "is_moderator": member.is_moderator if member else False,
+            "can_access_dashboard": member.can_access_dashboard if member else False,
+            "is_content_creator": member.is_content_creator if member else False,
+            "clan_tag": clan_tag,
         }
         
         access_token_jwt = create_access_token(token_data)
@@ -162,6 +172,7 @@ async def process_discord_code(code: str, db: Session) -> AuthResponse:
             is_moderator=member.is_moderator if member else False,
             can_access_dashboard=member.can_access_dashboard if member else False,
             is_content_creator=member.is_content_creator if member else False,
+            clan_tag=clan_tag,
             username=member.username if member and member.username else user.discord_username,
             global_name=member.global_name if member and member.global_name else user.discord_username,
             display_name=member.display_name if member and member.display_name else user.discord_username,

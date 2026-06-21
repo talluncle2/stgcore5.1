@@ -1,4 +1,4 @@
-import { API_BASE_URL, authedApiRequest } from "./api";
+import { isSupabaseEnabled, supabase } from "../lib/supabase";
 import {
   WarzoneMetrics,
   WarzoneOperation,
@@ -9,6 +9,40 @@ import {
 const OPERATIONS_KEY = "stg_warzone_operations";
 const PARTICIPATIONS_KEY = "stg_warzone_participations";
 const now = new Date().toISOString();
+
+type WarzoneOperationRow = {
+  id: string;
+  title: string;
+  codename?: string | null;
+  description: string;
+  image_url?: string | null;
+  mode: WarzoneOperation["mode"];
+  map?: string | null;
+  status: WarzoneOperation["status"];
+  allowed_clans: string[];
+  start_date?: string | null;
+  end_date?: string | null;
+  prize?: string | null;
+  entry_fee?: string | null;
+  rules?: string | null;
+  score_rule?: string | null;
+  registration_url?: string | null;
+  max_teams?: number | null;
+  participants: number;
+  is_active: boolean;
+  is_featured: boolean;
+  priority: number;
+  result?: WarzoneOperationResult | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type WarzoneParticipationRow = {
+  operation_id: string;
+  discord_id: string;
+  clan_tag: string;
+  registered_at: string;
+};
 
 export const defaultWarzoneOperations: WarzoneOperation[] = [
   {
@@ -94,45 +128,93 @@ function writeLocal<T>(key: string, value: T): T {
   return value;
 }
 
-async function publicRequest<T>(path: string): Promise<T> {
-  if (!API_BASE_URL) throw new Error("API indisponivel");
-  const response = await fetch(`${API_BASE_URL}${path}`);
-  if (!response.ok) throw new Error(`Endpoint indisponivel: ${response.status}`);
-  return response.json() as Promise<T>;
+function rowToOperation(row: WarzoneOperationRow): WarzoneOperation {
+  return {
+    id: row.id,
+    title: row.title,
+    codename: row.codename || undefined,
+    description: row.description,
+    imageUrl: row.image_url || undefined,
+    mode: row.mode,
+    map: row.map || undefined,
+    status: row.status,
+    allowedClans: row.allowed_clans,
+    startDate: row.start_date || undefined,
+    endDate: row.end_date || undefined,
+    prize: row.prize || undefined,
+    entryFee: row.entry_fee || undefined,
+    rules: row.rules || undefined,
+    scoreRule: row.score_rule || undefined,
+    registrationUrl: row.registration_url || undefined,
+    maxTeams: row.max_teams ?? undefined,
+    participants: row.participants,
+    isActive: row.is_active,
+    isFeatured: row.is_featured,
+    priority: row.priority,
+    result: row.result || undefined,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
 }
 
-function extractOperations(data: unknown): WarzoneOperation[] {
-  if (Array.isArray(data)) return data as WarzoneOperation[];
-  if (data && typeof data === "object") {
-    const source = data as Record<string, unknown>;
-    if (Array.isArray(source.operations)) return source.operations as WarzoneOperation[];
-    if (Array.isArray(source.data)) return source.data as WarzoneOperation[];
-  }
-  return [];
+function operationToRow(payload: Partial<WarzoneOperation>) {
+  return {
+    title: payload.title,
+    codename: payload.codename || null,
+    description: payload.description || "",
+    image_url: payload.imageUrl || null,
+    mode: payload.mode || "custom_lobby",
+    map: payload.map || null,
+    status: payload.status || "em_breve",
+    allowed_clans: (payload.allowedClans?.length ? payload.allowedClans : ["ALL"]).map((clan) =>
+      clan.trim().toUpperCase()
+    ),
+    start_date: payload.startDate || null,
+    end_date: payload.endDate || null,
+    prize: payload.prize || null,
+    entry_fee: payload.entryFee || null,
+    rules: payload.rules || null,
+    score_rule: payload.scoreRule || null,
+    registration_url: payload.registrationUrl || null,
+    max_teams: payload.maxTeams ?? null,
+    participants: payload.participants ?? 0,
+    is_active: payload.isActive !== false,
+    is_featured: payload.isFeatured === true,
+    priority: payload.priority ?? 0,
+    result: payload.result ?? null,
+  };
+}
+
+function rowToParticipation(row: WarzoneParticipationRow): WarzoneParticipation {
+  return {
+    operationId: row.operation_id,
+    userId: row.discord_id,
+    clanTag: row.clan_tag,
+    registeredAt: row.registered_at,
+  };
 }
 
 export async function getWarzoneOperations(): Promise<WarzoneOperation[]> {
-  try {
-    const operations = extractOperations(await publicRequest<unknown>("/public/warzone/operations"));
-    if (operations.length > 0) return operations;
-  } catch {
-    // Temporary fallback until the Replit API exposes Warzone operation endpoints.
+  if (!isSupabaseEnabled || !supabase) {
+    return readLocal(OPERATIONS_KEY, defaultWarzoneOperations);
   }
-  return readLocal(OPERATIONS_KEY, defaultWarzoneOperations);
+
+  const { data, error } = await supabase
+    .from("warzone_operations")
+    .select("*")
+    .order("priority", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`Falha ao carregar operacoes Warzone: ${error.message}`);
+  return (data as WarzoneOperationRow[]).map(rowToOperation);
 }
 
 export async function saveWarzoneOperation(
   payload: Partial<WarzoneOperation> & { id?: string }
 ): Promise<WarzoneOperation> {
-  try {
-    return await authedApiRequest<WarzoneOperation>(
-      payload.id ? `/admin/warzone/operations/${payload.id}` : "/admin/warzone/operations",
-      {
-        method: payload.id ? "PUT" : "POST",
-        body: JSON.stringify(payload),
-      }
-    );
-  } catch {
+  if (!payload.title?.trim()) throw new Error("O titulo da operacao e obrigatorio.");
+
+  if (!isSupabaseEnabled || !supabase) {
     const operations = readLocal(OPERATIONS_KEY, defaultWarzoneOperations);
     const current = payload.id ? operations.find((operation) => operation.id === payload.id) : undefined;
     const timestamp = new Date().toISOString();
@@ -140,23 +222,18 @@ export async function saveWarzoneOperation(
       ...current,
       ...payload,
       id: payload.id || `warzone-${Date.now()}`,
-      title: payload.title || current?.title || "Operacao Warzone",
+      title: payload.title.trim(),
       description: payload.description || current?.description || "",
-      codename: payload.codename || current?.codename,
       mode: payload.mode || current?.mode || "custom_lobby",
-      map: payload.map || current?.map,
       status: payload.status || current?.status || "em_breve",
       allowedClans: payload.allowedClans || current?.allowedClans || ["ALL"],
       participants: payload.participants ?? current?.participants ?? 0,
-      entryFee: payload.entryFee || current?.entryFee,
-      scoreRule: payload.scoreRule || current?.scoreRule,
       isActive: payload.isActive ?? current?.isActive ?? true,
       isFeatured: payload.isFeatured ?? current?.isFeatured ?? false,
       priority: payload.priority ?? current?.priority ?? 0,
       createdAt: current?.createdAt || timestamp,
       updatedAt: timestamp,
     } as WarzoneOperation;
-
     writeLocal(
       OPERATIONS_KEY,
       current
@@ -165,64 +242,92 @@ export async function saveWarzoneOperation(
     );
     return operation;
   }
+
+  const row = operationToRow({ ...payload, title: payload.title.trim() });
+  const query = payload.id
+    ? supabase.from("warzone_operations").update(row).eq("id", payload.id)
+    : supabase.from("warzone_operations").insert(row);
+  const { data, error } = await query.select("*").single();
+
+  if (error) throw new Error(`Falha ao salvar a operacao: ${error.message}`);
+  return rowToOperation(data as WarzoneOperationRow);
 }
 
 export async function registerForWarzoneOperation(
   operationId: string,
-  userId: string,
+  discordId: string,
   clanTag: string
 ): Promise<WarzoneParticipation> {
-  try {
-    return await authedApiRequest<WarzoneParticipation>(
-      `/warzone/operations/${operationId}/register`,
-      {
-        method: "POST",
-        body: JSON.stringify({ clanTag }),
-      }
-    );
-  } catch {
+  if (!isSupabaseEnabled || !supabase) {
     const participations = readLocal<WarzoneParticipation[]>(PARTICIPATIONS_KEY, []);
     const existing = participations.find(
-      (participation) => participation.operationId === operationId && participation.userId === userId
+      (participation) =>
+        participation.operationId === operationId && participation.userId === discordId
     );
     if (existing) return existing;
 
     const participation: WarzoneParticipation = {
       operationId,
-      userId,
+      userId: discordId,
       clanTag,
       registeredAt: new Date().toISOString(),
     };
     writeLocal(PARTICIPATIONS_KEY, [participation, ...participations]);
     return participation;
   }
+
+  const { data, error } = await supabase
+    .from("warzone_participations")
+    .insert({
+      operation_id: operationId,
+      discord_id: discordId,
+      clan_tag: clanTag.trim().toUpperCase(),
+    })
+    .select("operation_id, discord_id, clan_tag, registered_at")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      const existing = await getWarzoneParticipations(discordId);
+      const participation = existing.find((item) => item.operationId === operationId);
+      if (participation) return participation;
+    }
+    throw new Error(`Falha ao registrar participacao: ${error.message}`);
+  }
+  return rowToParticipation(data as WarzoneParticipationRow);
 }
 
-export function getLocalWarzoneParticipations(userId?: string): WarzoneParticipation[] {
-  const participations = readLocal<WarzoneParticipation[]>(PARTICIPATIONS_KEY, []);
-  return userId ? participations.filter((participation) => participation.userId === userId) : participations;
+export async function getWarzoneParticipations(discordId?: string): Promise<WarzoneParticipation[]> {
+  if (!isSupabaseEnabled || !supabase) {
+    const participations = readLocal<WarzoneParticipation[]>(PARTICIPATIONS_KEY, []);
+    return discordId
+      ? participations.filter((participation) => participation.userId === discordId)
+      : participations;
+  }
+
+  let query = supabase
+    .from("warzone_participations")
+    .select("operation_id, discord_id, clan_tag, registered_at")
+    .order("registered_at", { ascending: false });
+  if (discordId) query = query.eq("discord_id", discordId);
+  const { data, error } = await query;
+
+  if (error) throw new Error(`Falha ao carregar participacoes: ${error.message}`);
+  return (data as WarzoneParticipationRow[]).map(rowToParticipation);
 }
 
 export async function closeWarzoneOperation(
   operationId: string,
   result: Omit<WarzoneOperationResult, "closedAt">
 ): Promise<WarzoneOperation> {
-  const finalResult = { ...result, closedAt: new Date().toISOString() };
-  try {
-    return await authedApiRequest<WarzoneOperation>(
-      `/admin/warzone/operations/${operationId}/close`,
-      {
-        method: "POST",
-        body: JSON.stringify(finalResult),
-      }
-    );
-  } catch {
-    return saveWarzoneOperation({
-      id: operationId,
-      status: "encerrado",
-      result: finalResult,
-    });
-  }
+  const current = (await getWarzoneOperations()).find((operation) => operation.id === operationId);
+  if (!current) throw new Error("Operacao Warzone nao encontrada.");
+  return saveWarzoneOperation({
+    ...current,
+    id: operationId,
+    status: "encerrado",
+    result: { ...result, closedAt: new Date().toISOString() },
+  });
 }
 
 export function calculateWarzoneMetrics(operations: WarzoneOperation[]): WarzoneMetrics {

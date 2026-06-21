@@ -1,32 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, ExternalLink, PackageSearch } from "lucide-react";
 import { Link } from "react-router-dom";
-import { getHighlights } from "../../services/api";
-import { FeaturedBanner } from "../../types/api";
+import { getFeaturedHeroItems } from "../../services/featuredService";
+import { FeaturedHeroItem } from "../../types/api";
 
-const typeLabels: Record<FeaturedBanner["type"], string> = {
-  product: "Loja",
+const typeLabels: Record<FeaturedHeroItem["sourceType"], string> = {
+  store: "Loja",
   tournament: "Torneio",
-  event: "Evento",
-  notice: "Aviso",
+  news: "Noticia",
 };
 
-const typeCtas: Record<FeaturedBanner["type"], string> = {
-  product: "Ver item",
+const typeCtas: Record<FeaturedHeroItem["sourceType"], string> = {
+  store: "Ver item",
   tournament: "Ver torneio",
-  event: "Saiba mais",
-  notice: "Saiba mais",
+  news: "Ler novidade",
 };
 
 export function FeaturedCarousel() {
-  const [banners, setBanners] = useState<FeaturedBanner[]>([]);
+  const [banners, setBanners] = useState<FeaturedHeroItem[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const loadHighlights = async () => {
       setLoading(true);
-      const data = await getHighlights();
+      const data = await getFeaturedHeroItems();
       setBanners(data);
       setActiveIndex(0);
       setLoading(false);
@@ -92,7 +90,7 @@ export function FeaturedCarousel() {
             Nenhum destaque disponível no momento.
           </h1>
           <p className="text-[#b9b3c7]">
-            Produtos e torneios aparecerão aqui quando forem marcados como destaque na API.
+            Produtos e torneios aparecerao aqui quando forem marcados como destaque no banco.
           </p>
         </div>
       </section>
@@ -119,7 +117,7 @@ export function FeaturedCarousel() {
         <div className="max-w-3xl pb-14">
           <div className="mb-5 flex flex-wrap items-center gap-3">
             <span className="tactical-edge border border-[#b7ff4a]/40 bg-[#b7ff4a]/10 px-4 py-2 text-xs font-black uppercase tracking-[0.18em] text-[#b7ff4a]">
-              {activeBanner.badge || typeLabels[activeBanner.type]}
+              {activeBanner.badge || typeLabels[activeBanner.sourceType]}
             </span>
             <span className="text-xs font-black uppercase tracking-[0.18em] text-[#a7a0b8]">
               Destaque {activeIndex + 1}/{banners.length}
@@ -136,12 +134,12 @@ export function FeaturedCarousel() {
             </p>
           )}
 
-          {activeBanner.href && (
+          {activeBanner.actionUrl && (
             <Link
-              to={activeBanner.href}
+              to={activeBanner.actionUrl}
               className="tactical-edge inline-flex items-center gap-3 bg-[#a855f7] px-7 py-4 text-sm font-black uppercase tracking-[0.1em] text-white shadow-lg shadow-[#a855f7]/25 transition-all hover:bg-[#c084fc]"
             >
-              {activeBanner.ctaLabel || typeCtas[activeBanner.type]}
+              {activeBanner.actionLabel || typeCtas[activeBanner.sourceType]}
               <ExternalLink size={18} />
             </Link>
           )}

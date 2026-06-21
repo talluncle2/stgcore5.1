@@ -1,10 +1,26 @@
-import { authedApiRequest, getTournaments } from "./api";
-import { readContent } from "./contentStorage";
 import { assertAdmin } from "./adminGuard";
+import { deleteContent, readContent, upsertContent } from "./contentStorage";
+import { isSupabaseEnabled, supabase } from "../lib/supabase";
 import { AuthUser, Tournament, TournamentItem, TournamentPayload } from "../types/api";
 
 const KEY = "tournaments";
 const now = new Date().toISOString();
+
+type TournamentRow = {
+  id: string;
+  title: string;
+  description?: string | null;
+  image_url?: string | null;
+  status: string;
+  start_date?: string | null;
+  end_date?: string | null;
+  prize?: string | null;
+  priority: number;
+  is_active: boolean;
+  is_featured: boolean;
+  created_at: string;
+  updated_at: string;
+};
 
 export const defaultTournamentItems: TournamentItem[] = [
   {
@@ -23,30 +39,127 @@ export const defaultTournamentItems: TournamentItem[] = [
   },
 ];
 
-function extractTournaments(data: unknown): Tournament[] {
-  if (Array.isArray(data)) return data as Tournament[];
-  if (data && typeof data === "object" && Array.isArray((data as Record<string, unknown>).tournaments)) {
-    return (data as Record<string, unknown>).tournaments as Tournament[];
+function rowToTournamentItem(row: TournamentRow): TournamentItem {
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description || undefined,
+    imageUrl: row.image_url || undefined,
+    status: row.status,
+    startDate: row.start_date || undefined,
+    endDate: row.end_date || undefined,
+    prize: row.prize || undefined,
+    priority: row.priority,
+    isActive: row.is_active,
+    isFeatured: row.is_featured,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function tournamentItemToRow(payload: Partial<TournamentItem>) {
+  return {
+    title: payload.title,
+    description: payload.description || null,
+    image_url: payload.imageUrl || null,
+    status: payload.status || "em_breve",
+    start_date: payload.startDate || null,
+    end_date: payload.endDate || null,
+    prize: payload.prize || null,
+    priority: payload.priority ?? 0,
+    is_active: payload.isActive !== false,
+    is_featured: payload.isFeatured === true,
+  };
+}
+
+function tournamentItemToLegacy(item: TournamentItem): Tournament {
+  return {
+    tournament_id: item.id,
+    id: item.id,
+    code: item.title,
+    creator_discord_id: "",
+    ranking: item.description,
+    description: item.description,
+    status:
+      item.status === "rejeitado"
+        ? "rejeitado"
+        : item.status === "pendente"
+          ? "pendente"
+          : "aprovado",
+    created_at: item.createdAt,
+    image_url: item.imageUrl,
+    is_featured: item.isFeatured,
+  };
+}
+
+export async function getTournamentItems(): Promise<TournamentItem[]> {
+  if (!isSupabaseEnabled || !supabase) {
+    return readContent<TournamentItem>(KEY, defaultTournamentItems);
   }
-  return [];
+
+  const { data, error } = await supabase
+    .from("tournament_items")
+    .select("*")
+    .order("priority", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(`Falha ao carregar os torneios: ${error.message}`);
+  return (data as TournamentRow[]).map(rowToTournamentItem);
+}
+
+export async function getFeaturedTournamentItems(): Promise<TournamentItem[]> {
+  const items = await getTournamentItems();
+  return items.filter((item) => item.isActive && item.isFeatured);
+}
+
+export async function saveTournamentItem(
+  payload: Partial<TournamentItem> & { id?: string }
+): Promise<TournamentItem> {
+  if (!payload.title?.trim()) throw new Error("O titulo do torneio e obrigatorio.");
+
+  if (!isSupabaseEnabled || !supabase) {
+    return upsertContent(KEY, defaultTournamentItems, payload);
+  }
+
+  const row = tournamentItemToRow({ ...payload, title: payload.title.trim() });
+  const query = payload.id
+    ? supabase.from("tournament_items").update(row).eq("id", payload.id)
+    : supabase.from("tournament_items").insert(row);
+  const { data, error } = await query.select("*").single();
+
+  if (error) throw new Error(`Falha ao salvar o torneio: ${error.message}`);
+  return rowToTournamentItem(data as TournamentRow);
+}
+
+export async function deleteTournamentItem(id: string): Promise<void> {
+  if (!isSupabaseEnabled || !supabase) {
+    deleteContent(KEY, defaultTournamentItems, id);
+    return;
+  }
+
+  const { error } = await supabase.from("tournament_items").delete().eq("id", id);
+  if (error) throw new Error(`Falha ao excluir o torneio: ${error.message}`);
 }
 
 export async function getAdminTournaments(): Promise<Tournament[]> {
-  try {
-    const data = await authedApiRequest<unknown>("/admin/tournaments");
-    const tournaments = extractTournaments(data);
-    return tournaments.length > 0 ? tournaments : getTournaments(undefined, 100);
-  } catch {
-    return getTournaments(undefined, 100);
-  }
+  return (await getTournamentItems()).map(tournamentItemToLegacy);
 }
 
-export async function createTournament(payload: TournamentPayload, currentUser: AuthUser | null): Promise<Tournament> {
+export async function createTournament(
+  payload: TournamentPayload,
+  currentUser: AuthUser | null
+): Promise<Tournament> {
   assertAdmin(currentUser);
-  return authedApiRequest<Tournament>("/admin/tournaments", {
-    method: "POST",
-    body: JSON.stringify(payload),
+  const item = await saveTournamentItem({
+    title: String(payload.title || payload.code || "Torneio STG"),
+    description: payload.description || payload.ranking,
+    imageUrl: payload.imageUrl || payload.image_url,
+    status: payload.status,
+    isActive: payload.status !== "rejeitado",
+    isFeatured: Boolean(payload.is_featured || payload.featured || payload.destaque),
+    priority: Number(payload.priority || 0),
   });
+  return tournamentItemToLegacy(item);
 }
 
 export async function updateTournament(
@@ -55,50 +168,59 @@ export async function updateTournament(
   currentUser: AuthUser | null
 ): Promise<Tournament> {
   assertAdmin(currentUser);
-  return authedApiRequest<Tournament>(`/admin/tournaments/${tournamentId}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
+  const current = (await getTournamentItems()).find((item) => item.id === String(tournamentId));
+  const item = await saveTournamentItem({
+    ...current,
+    id: String(tournamentId),
+    title: String(payload.title || payload.code || current?.title || "Torneio STG"),
+    description: payload.description || payload.ranking || current?.description,
+    imageUrl: payload.imageUrl || payload.image_url || current?.imageUrl,
+    status: payload.status || current?.status,
+    isActive: payload.status ? payload.status !== "rejeitado" : current?.isActive,
+    isFeatured:
+      payload.is_featured ?? payload.featured ?? payload.destaque ?? current?.isFeatured,
+    priority: Number(payload.priority ?? current?.priority ?? 0),
   });
+  return tournamentItemToLegacy(item);
 }
 
-export async function deleteTournament(tournamentId: string | number, currentUser: AuthUser | null): Promise<void> {
+export async function deleteTournament(
+  tournamentId: string | number,
+  currentUser: AuthUser | null
+): Promise<void> {
   assertAdmin(currentUser);
-  await authedApiRequest<void>(`/admin/tournaments/${tournamentId}`, {
-    method: "DELETE",
-  });
+  await deleteTournamentItem(String(tournamentId));
 }
 
-export function registerForTournament(tournamentId: string | number, payload?: Record<string, unknown>) {
-  return authedApiRequest(`/tournaments/${tournamentId}/register`, {
-    method: "POST",
-    body: JSON.stringify(payload ?? {}),
-  });
+function unavailableRegistrationAction(): never {
+  throw new Error("Inscricoes de torneios aguardam a tabela de participantes no Supabase.");
 }
 
-export function submitTournamentPaymentProof(tournamentId: string | number, payload: Record<string, unknown>) {
-  return authedApiRequest(`/tournaments/${tournamentId}/payment-proof`, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+export async function registerForTournament(): Promise<never> {
+  return unavailableRegistrationAction();
 }
 
-export function getTournamentRegistrations(tournamentId: string | number) {
-  return authedApiRequest(`/admin/tournaments/${tournamentId}/registrations`);
+export async function submitTournamentPaymentProof(): Promise<never> {
+  return unavailableRegistrationAction();
 }
 
-export function approveTournamentRegistration(registrationId: string | number) {
-  return authedApiRequest(`/admin/tournament-registrations/${registrationId}/approve`, { method: "PUT" });
+export async function getTournamentRegistrations(): Promise<never> {
+  return unavailableRegistrationAction();
 }
 
-export function rejectTournamentRegistration(registrationId: string | number) {
-  return authedApiRequest(`/admin/tournament-registrations/${registrationId}/reject`, { method: "PUT" });
+export async function approveTournamentRegistration(): Promise<never> {
+  return unavailableRegistrationAction();
+}
+
+export async function rejectTournamentRegistration(): Promise<never> {
+  return unavailableRegistrationAction();
 }
 
 export function tournamentToTournamentItem(tournament: Tournament): TournamentItem {
-  const id = String(tournament.tournament_id || tournament.id || tournament.code);
+  const timestamp = tournament.created_at || new Date().toISOString();
   return {
-    id,
-    title: tournament.code ? `Torneio ${tournament.code}` : `Torneio ${id}`,
+    id: String(tournament.tournament_id || tournament.id || tournament.code),
+    title: tournament.code || `Torneio ${tournament.tournament_id}`,
     description: tournament.description || tournament.ranking,
     imageUrl: tournament.imageUrl || tournament.image_url,
     status: tournament.status,
@@ -106,34 +228,7 @@ export function tournamentToTournamentItem(tournament: Tournament): TournamentIt
     isActive: tournament.status !== "rejeitado",
     isFeatured: Boolean(tournament.is_featured || tournament.featured || tournament.destaque),
     priority: 0,
-    createdAt: tournament.created_at || new Date().toISOString(),
-    updatedAt: tournament.created_at || new Date().toISOString(),
+    createdAt: timestamp,
+    updatedAt: timestamp,
   };
-}
-
-export async function getTournamentItems(): Promise<TournamentItem[]> {
-  try {
-    const tournaments = await getTournaments(undefined, 100);
-    if (tournaments.length > 0) return tournaments.map(tournamentToTournamentItem);
-  } catch {
-    // TODO: integrate with Replit API when tournament management endpoints are available.
-  }
-  return readContent<TournamentItem>(KEY, defaultTournamentItems);
-}
-
-export async function getFeaturedTournamentItems(): Promise<TournamentItem[]> {
-  const items = await getTournamentItems();
-  return items.filter((item) => item.isActive && item.isFeatured);
-}
-
-export async function saveTournamentItem(payload: Partial<TournamentItem> & { id?: string }): Promise<TournamentItem> {
-  const path = payload.id ? `/admin/tournaments/${payload.id}` : "/admin/tournaments";
-  return authedApiRequest<TournamentItem>(path, {
-    method: payload.id ? "PUT" : "POST",
-    body: JSON.stringify(payload),
-  });
-}
-
-export async function deleteTournamentItem(id: string): Promise<void> {
-  await authedApiRequest<void>(`/admin/tournaments/${id}`, { method: "DELETE" });
 }

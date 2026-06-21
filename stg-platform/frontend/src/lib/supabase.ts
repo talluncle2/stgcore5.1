@@ -1,5 +1,21 @@
-export const isSupabaseEnabled = false;
-export const supabase = null;
+import { createClient } from "@supabase/supabase-js";
+import { AUTH_TOKEN_KEY } from "../services/api";
+
+const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || "").trim();
+const supabaseAnonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim();
+
+export const isSupabaseEnabled = Boolean(supabaseUrl && supabaseAnonKey);
+
+export const supabase = isSupabaseEnabled
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      accessToken: async () => localStorage.getItem(AUTH_TOKEN_KEY),
+      auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        persistSession: false,
+      },
+    })
+  : null;
 
 export type User = {
   id: string;

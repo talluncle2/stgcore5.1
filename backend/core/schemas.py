@@ -26,6 +26,7 @@ class AuthUser(BaseModel):
     is_moderator: bool = False
     can_access_dashboard: bool = False
     is_content_creator: bool = False
+    clan_tag: Optional[str] = None
     coins: Optional[int] = 0
     xp: Optional[int] = 0
     level: Optional[int] = 1

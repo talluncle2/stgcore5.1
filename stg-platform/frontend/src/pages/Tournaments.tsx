@@ -18,7 +18,7 @@ import { useAuth } from "../context/AuthContext";
 import { getTournamentItems } from "../services/tournamentsService";
 import {
   calculateWarzoneMetrics,
-  getLocalWarzoneParticipations,
+  getWarzoneParticipations,
   getWarzoneOperations,
   registerForWarzoneOperation,
 } from "../services/warzoneOperationsService";
@@ -94,9 +94,9 @@ export function Tournaments() {
       );
       setSelectedOperationId((current) => current || activeOperations[0]?.id || "");
 
-      if (user?.id || user?.discord_id) {
-        const userId = String(user.id || user.discord_id);
-        setRegisteredIds(new Set(getLocalWarzoneParticipations(userId).map((item) => item.operationId)));
+      if (user?.discord_id) {
+        const participations = await getWarzoneParticipations(String(user.discord_id));
+        setRegisteredIds(new Set(participations.map((item) => item.operationId)));
       }
       setLoading(false);
     }
@@ -125,8 +125,12 @@ export function Tournaments() {
       return;
     }
 
-    const userId = String(user.id || user.discord_id || user.username || "operator");
-    await registerForWarzoneOperation(selectedOperation.id, userId, operatorTag || "ALL");
+    const discordId = String(user.discord_id || "");
+    if (!discordId) {
+      setNotice("Nao foi possivel validar seu Discord. Entre novamente.");
+      return;
+    }
+    await registerForWarzoneOperation(selectedOperation.id, discordId, operatorTag || "ALL");
     setRegisteredIds((current) => new Set(current).add(selectedOperation.id));
     setOperations((current) =>
       current.map((operation) =>

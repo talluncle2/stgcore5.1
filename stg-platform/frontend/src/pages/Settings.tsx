@@ -37,10 +37,10 @@ import {
   buildApiUrl,
   getHealth,
   getOverview,
-  getProducts,
   getRanking,
-  getTournaments,
 } from "../services/api";
+import { getStoreItems } from "../services/storeService";
+import { getTournamentItems } from "../services/tournamentsService";
 import {
   getDiscordEvents,
   getDiscordGuild,
@@ -129,17 +129,17 @@ const checks = [
   },
   {
     label: "Loja",
-    endpoint: "/public/products?limit=5",
+    endpoint: "supabase://store_items",
     run: async () => {
-      const data = await getProducts(undefined, 5);
+      const data = await getStoreItems();
       return { ok: true, detail: `${data.length} produtos carregados` };
     },
   },
   {
     label: "Torneios",
-    endpoint: "/public/tournaments?limit=5",
+    endpoint: "supabase://tournament_items",
     run: async () => {
-      const data = await getTournaments(undefined, 5);
+      const data = await getTournamentItems();
       return { ok: true, detail: `${data.length} torneios carregados` };
     },
   },
@@ -231,7 +231,7 @@ function ContentManagementTab({
       icon: Activity,
       eyebrow: "Landing",
       title: "Gestao da Home",
-      description: "Banners proprios da pagina inicial e destaques visuais publicados pela API oficial.",
+      description: "Banners proprios da pagina inicial e destaques visuais publicados pelo sistema.",
       body: <HomeManager />,
     },
   }[type];
@@ -245,8 +245,8 @@ function ContentManagementTab({
           <p className="mt-3 text-sm text-[#94a3b8]">Criacao e edicao abrem em modal/card, sem formulario fixo ocupando a pagina.</p>
         </SettingsSectionCard>
         <SettingsSectionCard>
-          <SettingsStatusBadge tone="green">API oficial</SettingsStatusBadge>
-          <p className="mt-3 text-sm text-[#94a3b8]">Salvar, editar e excluir dependem de confirmacao da API do Replit.</p>
+          <SettingsStatusBadge tone="green">Banco direto</SettingsStatusBadge>
+          <p className="mt-3 text-sm text-[#94a3b8]">Loja e campeonatos usam Supabase com permissoes RLS vinculadas ao login Discord.</p>
         </SettingsSectionCard>
         <SettingsSectionCard>
           <SettingsStatusBadge tone="blue">Acoes agrupadas</SettingsStatusBadge>
@@ -547,7 +547,9 @@ function ApiTab() {
                 {result.ok ? <CheckCircle2 className="text-[#84cc16]" size={20} /> : <XCircle className="text-[#ef4444]" size={20} />}
                 <span className="font-black uppercase text-[#f8fafc]">{result.label}</span>
               </div>
-              <code className="break-all rounded-md border border-[#1e293b] bg-[#0f172a] px-3 py-2 text-xs text-[#94a3b8]">{buildApiUrl(result.endpoint)}</code>
+              <code className="break-all rounded-md border border-[#1e293b] bg-[#0f172a] px-3 py-2 text-xs text-[#94a3b8]">
+                {result.endpoint.startsWith("supabase://") ? result.endpoint : buildApiUrl(result.endpoint)}
+              </code>
               <p className={result.ok ? "text-sm font-bold text-[#84cc16]" : "text-sm font-bold text-[#ef4444]"}>{result.detail}</p>
             </div>
           ))}
@@ -673,10 +675,10 @@ function AdminCentralTab() {
   }, []);
 
   const cards = [
-    { title: "Home/Landing", description: "Hero, temporada atual e destaques da pagina inicial.", icon: Home, to: "/configuracoes?tab=home", tone: "purple" as const, status: "API oficial" },
+    { title: "Home/Landing", description: "Hero, temporada atual e destaques da pagina inicial.", icon: Home, to: "/configuracoes?tab=home", tone: "purple" as const, status: "Conteudo" },
     { title: "Noticias", description: "Comunicados, novidades e banners editoriais.", icon: FileText, to: "/configuracoes?tab=noticias", tone: "blue" as const, status: "Conteudo" },
-    { title: "Loja", description: "Produtos, precos, estoque e destaques comerciais.", icon: ShoppingCart, to: "/configuracoes?tab=loja", tone: "green" as const, status: "Produtos" },
-    { title: "Torneios", description: "Campeonatos, temporadas e inscricoes.", icon: Trophy, to: "/configuracoes?tab=campeonatos", tone: "orange" as const, status: "Competitivo" },
+    { title: "Loja", description: "Produtos, precos, estoque e destaques comerciais no Supabase.", icon: ShoppingCart, to: "/configuracoes?tab=loja", tone: "green" as const, status: "Banco direto" },
+    { title: "Torneios", description: "Campeonatos, temporadas e inscricoes no Supabase.", icon: Trophy, to: "/configuracoes?tab=campeonatos", tone: "orange" as const, status: "Banco direto" },
     { title: "Ranking", description: "Placares, operadores e estatisticas reais da API.", icon: Crown, to: "/configuracoes?tab=ranking", tone: "purple" as const, status: "Ranking" },
     { title: "Criadores", description: "Canais, lives e conteudo de criadores STG.", icon: Video, to: "/configuracoes?tab=criadores", tone: "blue" as const, status: "Criadores" },
     { title: "Membros", description: "Usuarios sincronizados, cargos e permissoes.", icon: Users, to: "/configuracoes?tab=membros", tone: "green" as const, status: "Discord" },
@@ -693,7 +695,7 @@ function AdminCentralTab() {
         icon={Shield}
         eyebrow="Comando central"
         title="Central Admin"
-        description="Acesso absoluto as areas administrativas do STG. Todas as acoes oficiais passam pela API Replit."
+        description="Acesso absoluto as areas administrativas do STG. Conteudo usa Supabase; Discord e bot continuam pela API Replit."
       />
 
       <div className="grid gap-4 md:grid-cols-3">

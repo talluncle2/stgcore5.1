@@ -1,12 +1,9 @@
 import type {
   AuthUser,
-  FeaturedBanner,
-  Product,
   PublicOverview,
   PublicStats,
   Punishment,
   RankingEntry,
-  Tournament,
 } from "../types/api";
 
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
@@ -208,85 +205,12 @@ async function fetchAuthedJson<T>(path: string, fallback: T): Promise<T> {
   }
 }
 
-function normalizeProduct(product: Record<string, unknown>): Product {
-  const id = product.product_id ?? product.id ?? product.code ?? "";
-  return {
-    ...product,
-    id: product.id as string | number | undefined,
-    product_id: String(id),
-    name: String(product.name ?? "Produto STG"),
-    description: product.description as string | undefined,
-    emoji: (product.emoji as string | undefined) || "STG",
-    price: Number(product.price ?? product.price_coins ?? 0),
-    price_coins: Number(product.price_coins ?? product.price ?? 0),
-    price_real: Number(product.price_real ?? 0),
-    stock: Number(product.stock ?? 0),
-    category: String(product.category ?? "geral"),
-    featured: Boolean(product.featured ?? product.is_featured ?? product.destaque ?? false),
-    is_featured: Boolean(product.is_featured ?? product.featured ?? product.destaque ?? false),
-    destaque: Boolean(product.destaque ?? product.featured ?? product.is_featured ?? false),
-    image_url: product.image_url as string | undefined,
-    imageUrl: (product.imageUrl as string | undefined) || (product.image_url as string | undefined),
-  };
-}
-
-function normalizeTournament(tournament: Record<string, unknown>): Tournament {
-  const id = tournament.tournament_id ?? tournament.id ?? tournament.code ?? "";
-  return {
-    ...tournament,
-    id: tournament.id as string | number | undefined,
-    tournament_id: String(id),
-    code: tournament.code as string | undefined,
-    creator_discord_id: (tournament.creator_discord_id ?? tournament.discord_id ?? "") as string | number,
-    creator_username: (tournament.creator_username ??
-      tournament.discord_username ??
-      "Unknown") as string,
-    discord_username: tournament.discord_username as string | undefined,
-    ranking_data: (tournament.ranking_data ?? tournament.ranking) as string | undefined,
-    ranking: tournament.ranking as string | undefined,
-    status: (tournament.status as Tournament["status"]) || "pendente",
-    created_at: tournament.created_at as string | undefined,
-    description: tournament.description as string | undefined,
-    image_url: tournament.image_url as string | undefined,
-    imageUrl: (tournament.imageUrl as string | undefined) || (tournament.image_url as string | undefined),
-    featured: Boolean(tournament.featured ?? tournament.is_featured ?? tournament.destaque ?? false),
-    is_featured: Boolean(tournament.is_featured ?? tournament.featured ?? tournament.destaque ?? false),
-    destaque: Boolean(tournament.destaque ?? tournament.featured ?? tournament.is_featured ?? false),
-  };
-}
-
 function extractArray<T>(data: unknown, key: string): T[] {
   if (Array.isArray(data)) return data as T[];
   if (data && typeof data === "object" && Array.isArray((data as Record<string, unknown>)[key])) {
     return (data as Record<string, unknown>)[key] as T[];
   }
   return [];
-}
-
-function productToBanner(product: Product): FeaturedBanner {
-  return {
-    id: `product-${product.product_id}`,
-    title: product.name,
-    description: product.description || `${product.price} coins`,
-    imageUrl: product.imageUrl || product.image_url,
-    type: "product",
-    href: "/loja",
-    ctaLabel: "Ver item",
-    badge: "Loja",
-  };
-}
-
-function tournamentToBanner(tournament: Tournament): FeaturedBanner {
-  return {
-    id: `tournament-${tournament.tournament_id}`,
-    title: tournament.code ? `Torneio #${tournament.code}` : `Torneio #${tournament.tournament_id}`,
-    description: tournament.description || tournament.ranking || "Competicao STG em destaque",
-    imageUrl: tournament.imageUrl || tournament.image_url,
-    type: "tournament",
-    href: "/torneios",
-    ctaLabel: "Ver torneio",
-    badge: "Torneio",
-  };
 }
 
 export async function getHealth(): Promise<{ status: "online" | "offline" }> {
@@ -340,45 +264,6 @@ export async function getRanking(limit: number = 20): Promise<RankingEntry[]> {
     position: entry.position || index + 1,
     username: entry.discord_username || entry.username || "Unknown",
   }));
-}
-
-export async function getTournaments(status?: string, limit: number = 20): Promise<Tournament[]> {
-  const params = new URLSearchParams();
-  if (status) params.append("status", status);
-  params.append("limit", limit.toString());
-
-  const data = await fetchJson<unknown>(`/public/tournaments?${params.toString()}`, undefined, []);
-  return extractArray<Record<string, unknown>>(data, "tournaments").map(normalizeTournament);
-}
-
-export async function getProducts(category?: string, limit: number = 50): Promise<Product[]> {
-  const params = new URLSearchParams();
-  if (category) params.append("category", category);
-  params.append("limit", limit.toString());
-
-  const data = await fetchJson<unknown>(`/public/products?${params.toString()}`, undefined, []);
-  return extractArray<Record<string, unknown>>(data, "products").map(normalizeProduct);
-}
-
-export async function getFeaturedProducts(): Promise<Product[]> {
-  const data = await fetchJson<unknown>("/public/products?featured_only=true&limit=20", undefined, []);
-  return extractArray<Record<string, unknown>>(data, "products")
-    .map(normalizeProduct)
-    .filter((product) => product.is_featured || product.featured || product.destaque);
-}
-
-export async function getFeaturedTournaments(): Promise<Tournament[]> {
-  const tournaments = await getTournaments(undefined, 50);
-  return tournaments.filter((tournament) => tournament.is_featured || tournament.featured || tournament.destaque);
-}
-
-export async function getHighlights(): Promise<FeaturedBanner[]> {
-  const [products, tournaments] = await Promise.all([
-    getFeaturedProducts(),
-    getFeaturedTournaments(),
-  ]);
-
-  return [...products.map(productToBanner), ...tournaments.map(tournamentToBanner)];
 }
 
 export async function getPunishments(limit: number = 20): Promise<Punishment[]> {

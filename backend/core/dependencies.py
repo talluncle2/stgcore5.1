@@ -9,6 +9,7 @@ from core.config import get_settings
 from core.database import get_db
 from core.models import User, DiscordMember
 from core.schemas import AuthUser
+from core.discord_identity import extract_clan_tag
 
 settings = get_settings()
 security = HTTPBearer()
@@ -23,13 +24,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
         expire = datetime.now(timezone.utc) + timedelta(hours=settings.JWT_EXPIRATION_HOURS)
     
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, settings.JWT_SECRET_KEY, algorithm=settings.JWT_ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, settings.SUPABASE_JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
     return encoded_jwt
 
 def decode_access_token(token: str) -> dict:
     """Decode JWT access token"""
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET_KEY, algorithms=[settings.JWT_ALGORITHM])
+        payload = jwt.decode(token, settings.SUPABASE_JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
         return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(
@@ -107,6 +108,7 @@ async def get_current_user(
         is_moderator=member.is_moderator if member else False,
         can_access_dashboard=member.can_access_dashboard if member else False,
         is_content_creator=member.is_content_creator if member else False,
+        clan_tag=extract_clan_tag(member),
         username=member.username if member and member.username else user.discord_username,
         discord_username=member.discord_username if member and member.discord_username else user.discord_username,
         global_name=member.global_name if member and member.global_name else user.discord_username,
