@@ -13,7 +13,7 @@ Frontend React/Vite do STG | Supremo Tribunal Gamer.
 
 ## Arquitetura
 
-Loja, torneios e operacoes Warzone usam Supabase PostgREST diretamente com
+Loja, torneios, operacoes Warzone e perfis de criadores usam Supabase PostgREST diretamente com
 `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`. Escritas sao protegidas por RLS
 e pelas claims do token emitido no login Discord.
 
@@ -23,7 +23,14 @@ sincronizacao do bot e dados administrativos do Discord. O frontend nunca usa
 
 Quando as variaveis do Supabase nao estao configuradas, loja e torneios usam
 um fallback local demonstrativo. Em producao, configure o Supabase e aplique a
-migration `stg-platform/supabase/migrations/20260621000003_store_tournaments_direct.sql`.
+migration `stg-platform/supabase/migrations/20260621000003_store_tournaments_direct.sql`
+e depois `20260621000004_creators_direct.sql`.
+
+O modulo de criadores detecta YouTube, Twitch, Kick e TikTok pelo link publico
+informado no perfil. O navegador valida e normaliza plataforma, handle e URL.
+Metricas, videos e estado ao vivo so sao exibidos quando ja existem em
+`creator_content`; APIs privadas ou chaves das plataformas nao sao expostas no
+frontend.
 
 ## Rodar Local
 

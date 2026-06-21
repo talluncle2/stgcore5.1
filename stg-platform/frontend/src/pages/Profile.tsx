@@ -33,16 +33,16 @@ import {
   disableMyCreatorChannel,
   getMyCreatorProfile,
   registerMyCreatorProfile,
+  resolveCreatorProfileLink,
   syncMyCreatorProfile,
   updateMyCreatorChannel,
 } from "../services/creatorsService";
 import { getMyPublicProfile, updateMyPublicProfile } from "../services/profileService";
-import { AuthUser, ContentCreator, CreatorChannel, CreatorChannelPayload, CreatorPlatform, PublicProfilePayload } from "../types/api";
+import { AuthUser, ContentCreator, CreatorChannel, CreatorChannelPayload, PublicProfilePayload } from "../types/api";
 import { hasAdminAccess, hasCreatorAccess } from "../utils/permissions";
 
 type ProfileTab = "resumo" | "publico" | "criador" | "privacidade";
 
-const platforms: CreatorPlatform[] = ["youtube", "twitch", "kick", "tiktok"];
 const MAX_PROFILE_IMAGE_BYTES = 5 * 1024 * 1024;
 
 const platformColors: Record<string, string> = {
@@ -79,7 +79,6 @@ const emptyProfile: PublicProfilePayload = {
 };
 
 const emptyChannel: CreatorChannelPayload = {
-  platform: "youtube",
   channel_url: "",
   is_active: true,
 };
@@ -129,6 +128,8 @@ function getChannelSyncStatus(channel?: CreatorChannel | null): string {
 function getChannelSyncLabel(channel?: CreatorChannel | null): string {
   const status = getChannelSyncStatus(channel);
   if (status === "ok") return "Sincronizado";
+  if (status === "link_validated") return "Link validado";
+  if (status === "browser_limited") return "Perfil vinculado";
   if (status === "not_configured") return "API nao configurada";
   if (status === "not_implemented") return "Nao implementado";
   if (status === "not_found") return "Canal nao encontrado";
@@ -528,11 +529,14 @@ export function Profile() {
     ? (visibleCreatorProfile?.latest_content || visibleCreatorProfile?.latest_contents || []).filter((content) => content.channel_id === primaryCreatorChannel.id).slice(0, 3)
     : [];
   const primaryChannelName = primaryCreatorChannel?.channel_name || (primaryCreatorChannel ? getChannelLabel(primaryCreatorChannel) : "Nenhuma plataforma cadastrada");
-  const primaryChannelAvatarUrl = primaryCreatorChannel?.thumbnail_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(primaryChannelName)}&background=111827&color=c084fc`;
+  const primaryChannelAvatarUrl =
+    primaryCreatorChannel?.thumbnail_url ||
+    visibleCreatorProfile?.avatar_url ||
+    `https://ui-avatars.com/api/?name=${encodeURIComponent(primaryChannelName)}&background=111827&color=c084fc`;
   const primaryChannelSyncStatus = getChannelSyncStatus(primaryCreatorChannel);
   const primaryChannelSyncLabel = getChannelSyncLabel(primaryCreatorChannel);
-  const usedPlatforms = visibleCreatorProfile?.channels.filter((channel) => channel.is_active).map((channel) => channel.platform) || [];
-  const showCreatorChannelForm = !loading && !creatorApiError && Boolean(canManageCreator);
+  const primaryChannelReady = ["ok", "link_validated", "browser_limited"].includes(primaryChannelSyncStatus);
+  const showCreatorChannelForm = !loading && Boolean(canManageCreator);
 
   useEffect(() => {
     async function load() {
@@ -546,14 +550,14 @@ export function Profile() {
           try {
             creator = await getMyCreatorProfile();
             if (!creator) {
-              const registeredCreator = await registerMyCreatorProfile();
+              const registeredCreator = await registerMyCreatorProfile(user || undefined);
               creator = registeredCreator?.creator ?? null;
             }
             if (!creator) {
-              setCreatorApiError("A API de criadores nao retornou o perfil do usuario autenticado.");
+              setCreatorApiError("O Supabase nao retornou o perfil do criador autenticado.");
             }
           } catch (err) {
-            setCreatorApiError(err instanceof Error ? err.message : "Nao foi possivel conectar a API de criadores.");
+            setCreatorApiError(err instanceof Error ? err.message : "Nao foi possivel conectar ao banco de criadores.");
           }
         }
 
@@ -625,9 +629,9 @@ export function Profile() {
       if (syncedCreator) {
         setCreatorProfile(syncedCreator);
       }
-      setNotice("Dados reais da plataforma sincronizados.");
+      setNotice("Links dos perfis validados e sincronizados no Supabase.");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Nao foi possivel sincronizar com a API de criadores.";
+      const message = err instanceof Error ? err.message : "Nao foi possivel validar os links dos perfis.";
       setCreatorApiError(message);
       setError(message);
     } finally {
@@ -639,13 +643,27 @@ export function Profile() {
     event.preventDefault();
     const currentUser = user;
     if (!currentUser) return;
-    const duplicateChannel = !editingChannel && visibleCreatorProfile?.channels.find((channel) => isSameCreatorChannel(channel, channelForm));
+    let normalizedChannel: CreatorChannelPayload;
+    try {
+      const resolved = resolveCreatorProfileLink(channelForm.channel_url || "");
+      normalizedChannel = {
+        channel_url: resolved.canonicalUrl,
+        platform: resolved.platform,
+        channel_id: resolved.channelId,
+        handle: resolved.handle,
+        is_active: true,
+      };
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Link de perfil invalido.");
+      return;
+    }
+    const duplicateChannel = !editingChannel && visibleCreatorProfile?.channels.find((channel) => isSameCreatorChannel(channel, normalizedChannel));
     if (duplicateChannel) {
       setError("Esta conta de criador ja esta cadastrada. Use editar ou remova a conta atual antes de adicionar outra.");
       setChannelForm(emptyChannel);
       return;
     }
-    const samePlatformActiveChannel = !editingChannel && visibleCreatorProfile?.channels.some((channel) => channel.is_active && channel.platform === channelForm.platform);
+    const samePlatformActiveChannel = !editingChannel && visibleCreatorProfile?.channels.some((channel) => channel.is_active && channel.platform === normalizedChannel.platform);
     if (samePlatformActiveChannel) {
       setError("Voce ja possui uma conta cadastrada nesta plataforma. Remova ou edite a conta existente antes de adicionar outra.");
       setChannelForm(emptyChannel);
@@ -655,7 +673,7 @@ export function Profile() {
     setError(null);
     try {
       if (editingChannel) {
-        const updatedChannel = await updateMyCreatorChannel(editingChannel.id, channelForm);
+        const updatedChannel = await updateMyCreatorChannel(editingChannel.id, normalizedChannel);
         setCreatorProfile((current) => {
           const base = current || createLocalCreatorProfile(currentUser, updatedChannel);
           return {
@@ -665,7 +683,7 @@ export function Profile() {
         });
         setNotice("Canal atualizado.");
       } else {
-        const createdChannel = await addMyCreatorChannel(channelForm);
+        const createdChannel = await addMyCreatorChannel(normalizedChannel);
         setCreatorProfile((current) => {
           const base = current || createLocalCreatorProfile(currentUser, createdChannel);
           return {
@@ -673,7 +691,7 @@ export function Profile() {
             channels: [...base.channels.filter((channel) => channel.id !== createdChannel.id), createdChannel],
           };
         });
-        setNotice("Canal cadastrado para monitoramento.");
+        setNotice("Perfil vinculado e identificado automaticamente pelo link.");
       }
       setChannelForm(emptyChannel);
       setEditingChannel(null);
@@ -702,8 +720,8 @@ export function Profile() {
       if (refreshedCreator) {
         setCreatorProfile(refreshedCreator);
       }
-    } catch {
-      setError("Recurso aguardando integração da API para remover canais.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Nao foi possivel remover o perfil vinculado.");
     } finally {
       setSaving(false);
     }
@@ -938,7 +956,7 @@ export function Profile() {
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="mt-0.5 shrink-0 text-red-400" size={16} />
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-300">API de criadores indisponivel</p>
+                      <p className="text-[10px] font-black uppercase tracking-[0.18em] text-red-300">Banco de criadores indisponivel</p>
                       <p className="mt-1 text-sm text-slate-400">{creatorApiError}</p>
                     </div>
                   </div>
@@ -953,17 +971,7 @@ export function Profile() {
               <form onSubmit={saveChannel}>
                 <HudPanel>
                   <SectionHeader icon={editingChannel ? LinkIcon : Plus} title={editingChannel ? "Editar Canal" : "Adicionar Canal"} />
-                  <div className="grid gap-4 p-5 md:grid-cols-[220px_1fr_auto] md:items-end">
-                    <TacticalSelect label="Plataforma" value={channelForm.platform || "youtube"} onChange={(value) => setChannelForm({ ...channelForm, platform: value as CreatorPlatform })}>
-                      {platforms.map((platform) => {
-                        const isPlatformTaken = !editingChannel && usedPlatforms.includes(platform);
-                        return (
-                          <option key={platform} value={platform} disabled={isPlatformTaken}>
-                            {platformLabels[platform] || platform}{isPlatformTaken ? " (já cadastrada)" : ""}
-                          </option>
-                        );
-                      })}
-                    </TacticalSelect>
+                  <div className="grid gap-4 p-5 md:grid-cols-[1fr_auto] md:items-end">
                     <TacticalInput label="URL Publica do Canal / Perfil" value={channelForm.channel_url || ""} onChange={(value) => setChannelForm({ ...channelForm, channel_url: value })} placeholder="https://youtube.com/@seucanal" />
                     <div className="flex gap-2">
                       <TacticalSubmitButton saving={saving}><Plus size={13} /> {editingChannel ? "Atualizar" : "Adicionar"}</TacticalSubmitButton>
@@ -974,7 +982,7 @@ export function Profile() {
                       )}
                     </div>
                   </div>
-                  <p className="px-5 pb-4 text-[10px] text-slate-600">Informe apenas URLs publicas. A plataforma permanece cadastrada ate voce remover manualmente.</p>
+                  <p className="px-5 pb-4 text-[10px] text-slate-600">YouTube, Twitch, Kick e TikTok sao detectados automaticamente. O navegador valida o perfil sem usar a API Replit.</p>
                 </HudPanel>
               </form>
             )}
@@ -996,7 +1004,7 @@ export function Profile() {
                       <p className="font-mono text-[9px] text-purple-400">SYNC {primaryCreatorChannel?.last_checked_at ? `OK ${new Date(primaryCreatorChannel.last_checked_at).toLocaleDateString("pt-BR")}` : "PENDENTE"}</p>
                     </div>
                     {primaryCreatorChannel && (
-                      <button type="button" onClick={() => void syncCreatorProfile()} disabled={syncingCreator || saving} className="inline-flex items-center gap-1.5 border border-purple-500/25 bg-black/45 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-purple-200 backdrop-blur transition-colors hover:border-purple-400/50 hover:text-white disabled:opacity-50" title="Sincronizar dados reais da plataforma cadastrada">
+                      <button type="button" onClick={() => void syncCreatorProfile()} disabled={syncingCreator || saving} className="inline-flex items-center gap-1.5 border border-purple-500/25 bg-black/45 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.14em] text-purple-200 backdrop-blur transition-colors hover:border-purple-400/50 hover:text-white disabled:opacity-50" title="Validar novamente os links cadastrados">
                         <RefreshCw className={syncingCreator ? "animate-spin" : ""} size={11} /> Sincronizar
                       </button>
                     )}
@@ -1009,7 +1017,7 @@ export function Profile() {
                         <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border-2 border-[#050608] bg-green-500" style={{ boxShadow: "0 0 8px #4ade80" }} />
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400/70">Perfil Publico Sincronizado</p>
+                        <p className="text-[9px] font-black uppercase tracking-[0.22em] text-purple-400/70">Perfil Publico Vinculado</p>
                         <h2 className="mt-1 text-2xl font-black uppercase tracking-[0.06em] text-white" style={{ textShadow: "0 0 30px rgba(168,85,247,0.3)" }}>
                           {primaryChannelName}
                         </h2>
@@ -1017,8 +1025,8 @@ export function Profile() {
                           {primaryCreatorChannel && <PlatformBadge platform={primaryCreatorChannel.platform} />}
                           <span className="border border-purple-500/35 bg-purple-500/12 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-purple-300">{visibleCreatorProfile.channels.length} Plataformas</span>
                           {primaryCreatorChannel?.is_active && (
-                            <span className={`flex items-center gap-1.5 border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${primaryChannelSyncStatus === "ok" ? "border-green-500/35 bg-green-500/10 text-green-400" : "border-amber-500/35 bg-amber-500/10 text-amber-300"}`}>
-                              <span className="relative flex h-1.5 w-1.5"><span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${primaryChannelSyncStatus === "ok" ? "bg-green-400" : "bg-amber-300"}`} /></span>
+                            <span className={`flex items-center gap-1.5 border px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest ${primaryChannelReady ? "border-green-500/35 bg-green-500/10 text-green-400" : "border-amber-500/35 bg-amber-500/10 text-amber-300"}`}>
+                              <span className="relative flex h-1.5 w-1.5"><span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${primaryChannelReady ? "bg-green-400" : "bg-amber-300"}`} /></span>
                               {primaryChannelSyncLabel}
                             </span>
                           )}
@@ -1027,11 +1035,20 @@ export function Profile() {
                     </div>
 
                     <div className="grid grid-cols-3 gap-2 md:min-w-80">
-                      {[
-                        { label: "Inscritos", value: formatCompactNumber(primaryCreatorChannel?.subscriber_count) },
-                        { label: "Videos", value: formatCompactNumber(primaryCreatorChannel?.video_count) },
-                        { label: "Views", value: formatCompactNumber(primaryCreatorChannel?.view_count) },
-                      ].map((stat) => (
+                      {(primaryCreatorChannel?.subscriber_count !== undefined ||
+                      primaryCreatorChannel?.video_count !== undefined ||
+                      primaryCreatorChannel?.view_count !== undefined
+                        ? [
+                            { label: "Inscritos", value: formatCompactNumber(primaryCreatorChannel?.subscriber_count) },
+                            { label: "Videos", value: formatCompactNumber(primaryCreatorChannel?.video_count) },
+                            { label: "Views", value: formatCompactNumber(primaryCreatorChannel?.view_count) },
+                          ]
+                        : [
+                            { label: "Perfis", value: String(visibleCreatorProfile.channels.length) },
+                            { label: "Fonte", value: "LINK" },
+                            { label: "Status", value: primaryChannelReady ? "VALIDO" : "PENDENTE" },
+                          ]
+                      ).map((stat) => (
                         <div key={stat.label} className="relative border border-purple-500/20 p-3 text-center" style={{ background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)" }}>
                           <p className="text-[9px] font-black uppercase tracking-[0.15em] text-purple-400/70">{stat.label}</p>
                           <p className="mt-1 font-mono text-lg font-black text-white" style={{ textShadow: "0 0 12px rgba(168,85,247,0.4)" }}>{stat.value}</p>
@@ -1049,7 +1066,7 @@ export function Profile() {
                       <div className="relative border border-purple-500/15 bg-black/25 p-4" style={{ boxShadow: "inset 0 1px 0 rgba(168,85,247,0.06)" }}>
                         <Corners size={6} />
                         <p className="mb-2 text-[9px] font-black uppercase tracking-[0.2em] text-purple-400/70">Bio Publica</p>
-                        <p className="text-sm leading-6 text-slate-400">{primaryCreatorChannel?.description || "A bio publica da plataforma ainda nao foi sincronizada."}</p>
+                        <p className="text-sm leading-6 text-slate-400">{primaryCreatorChannel?.description || "O link foi validado. Bio e metricas dependem das APIs oficiais da plataforma."}</p>
                       </div>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -1133,7 +1150,7 @@ export function Profile() {
                   </div>
                 </div>
               ))}
-              {!creatorProfile && <div className="stg-hud-panel p-5 text-[#94a3b8]">Recurso aguardando integração da API para retornar seu perfil de criador.</div>}
+              {!creatorProfile && <div className="stg-hud-panel p-5 text-[#94a3b8]">Perfil ainda nao cadastrado no Supabase.</div>}
               {creatorProfile && creatorProfile.channels.length === 0 && <div className="stg-hud-panel p-5 text-[#94a3b8]">Nenhum canal cadastrado ainda.</div>}
             </div>
           </section>

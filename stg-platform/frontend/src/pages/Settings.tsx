@@ -782,7 +782,7 @@ export function Settings() {
             icon={Video}
             eyebrow="Conteudo e comunidade"
             title="Criadores de Conteudo STG"
-            description="Vincule membros com cargo de criador, canais YouTube/Twitch/Kick/TikTok e verifique lives/videos via API."
+            description="Gerencie criadores e vincule perfis YouTube, Twitch, Kick ou TikTok diretamente no Supabase."
           />
           <AdminCreators />
         </div>

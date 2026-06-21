@@ -23,22 +23,28 @@ export function Creators() {
   useEffect(() => {
     async function load() {
       setLoading(true);
-      const [creatorData, featuredData, liveData, latestData] = await Promise.all([
-        getCreators(),
-        getFeaturedCreators(),
-        getLiveCreators(),
-        getLatestCreatorContent(),
-      ]);
-      setCreators(creatorData);
-      setFeaturedCreators(featuredData);
-      setLiveContent(liveData);
-      setLatestContent(latestData);
-      if (creatorId) {
-        setSelectedCreator(await getCreatorById(creatorId));
-      } else {
+      try {
+        const [creatorData, featuredData, liveData, latestData, selectedData] = await Promise.all([
+          getCreators(),
+          getFeaturedCreators(),
+          getLiveCreators(),
+          getLatestCreatorContent(),
+          creatorId ? getCreatorById(creatorId) : Promise.resolve(null),
+        ]);
+        setCreators(creatorData);
+        setFeaturedCreators(featuredData);
+        setLiveContent(liveData);
+        setLatestContent(latestData);
+        setSelectedCreator(selectedData);
+      } catch {
+        setCreators([]);
+        setFeaturedCreators([]);
+        setLiveContent([]);
+        setLatestContent([]);
         setSelectedCreator(null);
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     }
     void load();
   }, [creatorId]);
@@ -60,7 +66,7 @@ export function Creators() {
                 Criadores de Conteudo STG
               </h1>
               <p className="mt-4 max-w-3xl text-[#94a3b8]">
-                Lives, videos recentes e canais vinculados aos membros com cargo de Criador de Conteudo no Discord.
+                Perfis oficiais vinculados por URL, com identidade validada pelo login Discord.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-3 text-center">
@@ -97,7 +103,7 @@ export function Creators() {
               </section>
             )}
             {creatorId && !selectedCreator && (
-              <div className="stg-hud-panel p-6 text-[#94a3b8]">Perfil de criador aguardando retorno da API ou nao encontrado.</div>
+              <div className="stg-hud-panel p-6 text-[#94a3b8]">Perfil de criador nao encontrado no Supabase.</div>
             )}
 
             <section className="space-y-4">
@@ -107,7 +113,7 @@ export function Creators() {
                   {liveContent.map((content) => <LiveContentCard key={content.id} content={content} onWatch={setSelectedContent} />)}
                 </div>
               ) : (
-                <div className="stg-hud-panel p-6 text-[#94a3b8]">Nenhuma transmissão ao vivo no momento. Exibindo videos recentes abaixo.</div>
+                <div className="stg-hud-panel p-6 text-[#94a3b8]">Nenhuma transmissao ao vivo registrada no momento.</div>
               )}
             </section>
 
@@ -129,7 +135,7 @@ export function Creators() {
               <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {latestContent.slice(0, 6).map((content) => <LiveContentCard key={content.id} content={content} onWatch={setSelectedContent} />)}
               </div>
-              {latestContent.length === 0 && <div className="stg-hud-panel p-6 text-[#94a3b8]">Videos aguardando sincronizacao das plataformas.</div>}
+              {latestContent.length === 0 && <div className="stg-hud-panel p-6 text-[#94a3b8]">Conteudos recentes ainda nao foram cadastrados no Supabase.</div>}
             </section>
 
             <section className="space-y-4">

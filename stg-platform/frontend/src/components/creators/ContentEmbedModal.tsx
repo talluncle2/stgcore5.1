@@ -51,7 +51,7 @@ export function ContentEmbedModal({ content, onClose }: ContentEmbedModalProps) 
         ) : (
           <div className="grid min-h-[280px] place-items-center p-6 text-center">
             <div>
-              <p className="text-sm font-bold text-[#94a3b8]">A API ainda nao forneceu player embed para este conteudo.</p>
+              <p className="text-sm font-bold text-[#94a3b8]">Este conteudo nao possui player incorporado. Abra o perfil na plataforma.</p>
               {content.content_url && (
                 <a href={content.content_url} target="_blank" rel="noreferrer" className="stg-button-primary mt-5 inline-flex items-center gap-2">
                   Abrir na plataforma <ExternalLink size={16} />

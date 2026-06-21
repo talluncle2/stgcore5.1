@@ -59,11 +59,19 @@ export function Landing() {
   const [selectedContent, setSelectedContent] = useState<CreatorContent | null>(null);
 
   useEffect(() => {
-    void getFeaturedHeroItems().then(setFeaturedItems);
-    void getActiveHomeContent().then(setHomeContent);
-    void getLiveCreators().then(setCreatorLive);
-    void getFeaturedCreators().then(setFeaturedCreators);
-    void getLatestCreatorContent().then(setCreatorLatest);
+    void Promise.allSettled([
+      getFeaturedHeroItems(),
+      getActiveHomeContent(),
+      getLiveCreators(),
+      getFeaturedCreators(),
+      getLatestCreatorContent(),
+    ]).then(([heroResult, homeResult, liveResult, creatorsResult, latestResult]) => {
+      if (heroResult.status === "fulfilled") setFeaturedItems(heroResult.value);
+      if (homeResult.status === "fulfilled") setHomeContent(homeResult.value);
+      if (liveResult.status === "fulfilled") setCreatorLive(liveResult.value);
+      if (creatorsResult.status === "fulfilled") setFeaturedCreators(creatorsResult.value);
+      if (latestResult.status === "fulfilled") setCreatorLatest(latestResult.value);
+    });
   }, []);
 
   const handleArenaEntry = () => {
@@ -229,7 +237,7 @@ export function Landing() {
             ))}
           </div>
           {featuredCreators.length === 0 && (
-            <div className="stg-hud-panel p-5 text-sm text-[#94a3b8]">Criadores em destaque aguardando curadoria da API.</div>
+            <div className="stg-hud-panel p-5 text-sm text-[#94a3b8]">Criadores em destaque aguardando curadoria no Supabase.</div>
           )}
         </section>
 
@@ -247,7 +255,7 @@ export function Landing() {
             ))}
           </div>
           {creatorLatest.length === 0 && (
-            <div className="stg-hud-panel p-5 text-sm text-[#94a3b8]">Videos recentes aguardando integração da API.</div>
+            <div className="stg-hud-panel p-5 text-sm text-[#94a3b8]">Conteudos recentes ainda nao foram cadastrados no Supabase.</div>
           )}
         </section>
 
