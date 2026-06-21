@@ -1,13 +1,25 @@
 import { createClient } from "@supabase/supabase-js";
 import { AUTH_TOKEN_KEY } from "../services/api";
 
-const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL || "").trim();
-const supabaseAnonKey = String(import.meta.env.VITE_SUPABASE_ANON_KEY || "").trim();
+// Publishable Supabase values are safe to ship to browsers. Authorization is
+// enforced by RLS and the Discord JWT, never by hiding this client key.
+const DEFAULT_SUPABASE_URL = "https://dczcobkcxnlclypahbod.supabase.co";
+const DEFAULT_SUPABASE_PUBLISHABLE_KEY =
+  "sb_publishable__91UWFLN7xGrnqDU4k_nPA_pnpzFgLA";
 
-export const isSupabaseEnabled = Boolean(supabaseUrl && supabaseAnonKey);
+const supabaseUrl = String(
+  import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL
+).trim();
+const supabasePublishableKey = String(
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    import.meta.env.VITE_SUPABASE_ANON_KEY ||
+    DEFAULT_SUPABASE_PUBLISHABLE_KEY
+).trim();
+
+export const isSupabaseEnabled = Boolean(supabaseUrl && supabasePublishableKey);
 
 export const supabase = isSupabaseEnabled
-  ? createClient(supabaseUrl, supabaseAnonKey, {
+  ? createClient(supabaseUrl, supabasePublishableKey, {
       accessToken: async () => localStorage.getItem(AUTH_TOKEN_KEY),
       auth: {
         autoRefreshToken: false,

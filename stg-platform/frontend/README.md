@@ -14,7 +14,8 @@ Frontend React/Vite do STG | Supremo Tribunal Gamer.
 ## Arquitetura
 
 Loja, torneios, operacoes Warzone e perfis de criadores usam Supabase PostgREST diretamente com
-`VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`. Escritas sao protegidas por RLS
+`VITE_SUPABASE_URL` e `VITE_SUPABASE_PUBLISHABLE_KEY` (ou
+`VITE_SUPABASE_ANON_KEY` para compatibilidade). Escritas sao protegidas por RLS
 e pelas claims do token emitido no login Discord.
 
 A API Replit continua responsavel por login, validacao de cargos do Discord,
@@ -55,6 +56,7 @@ Crie `.env` local a partir de `.env.example`:
 ```env
 VITE_API_BASE_URL=https://URL-DA-API-REPLIT
 VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_EXEMPLO
 VITE_SUPABASE_ANON_KEY=sua_chave_anon_publica
 VITE_DISCORD_INVITE_URL=https://discord.gg/SEU_CONVITE
 VITE_REQUIRE_AUTH=false
