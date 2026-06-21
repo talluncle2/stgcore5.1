@@ -91,6 +91,8 @@ export interface AuthUser {
   role_ids?: Array<string | number>;
   discord_roles?: Array<string | number>;
   guild_roles?: Array<string | number>;
+  clan_tag?: string;
+  clanTag?: string;
   permissions?: Array<string | number>;
   sectors?: Array<string | number>;
   is_admin?: boolean;

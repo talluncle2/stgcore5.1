@@ -6,6 +6,7 @@ import { DeleteConfirmDialog } from "./DeleteConfirmDialog";
 import { ImageUploadField } from "./ImageUploadField";
 import { deleteTournamentItem, getTournamentItems, saveTournamentItem } from "../../services/tournamentsService";
 import { TournamentItem } from "../../types/api";
+import { WarzoneOperationsManager } from "./WarzoneOperationsManager";
 
 const emptyForm: Partial<TournamentItem> = {
   title: "",
@@ -144,6 +145,8 @@ export function TournamentManager() {
         description={`Excluir "${deleteTarget?.title || "este torneio"}"?`}
         onConfirm={remove}
       />
+
+      <WarzoneOperationsManager />
     </div>
   );
 }

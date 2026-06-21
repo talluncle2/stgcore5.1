@@ -8,6 +8,7 @@ interface AdminContentCardProps {
   badges?: string[];
   onEdit: () => void;
   onDelete: () => void;
+  destructiveLabel?: string;
 }
 
 export function AdminContentCard({
@@ -18,6 +19,7 @@ export function AdminContentCard({
   badges = [],
   onEdit,
   onDelete,
+  destructiveLabel = "Excluir",
 }: AdminContentCardProps) {
   return (
     <article className="stg-hud-panel overflow-hidden">
@@ -43,7 +45,7 @@ export function AdminContentCard({
           <SettingsActionMenu
             actions={[
               { label: "Editar", onClick: onEdit },
-              { label: "Excluir", onClick: onDelete, danger: true },
+              { label: destructiveLabel, onClick: onDelete, danger: true },
             ]}
           />
         </div>
