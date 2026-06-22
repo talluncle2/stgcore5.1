@@ -18,6 +18,16 @@ const supabasePublishableKey = String(
 
 export const isSupabaseEnabled = Boolean(supabaseUrl && supabasePublishableKey);
 
+export const publicSupabase = isSupabaseEnabled
+  ? createClient(supabaseUrl, supabasePublishableKey, {
+      auth: {
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+        persistSession: false,
+      },
+    })
+  : null;
+
 export const supabase = isSupabaseEnabled
   ? createClient(supabaseUrl, supabasePublishableKey, {
       accessToken: async () => localStorage.getItem(AUTH_TOKEN_KEY),

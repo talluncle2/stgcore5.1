@@ -1,5 +1,5 @@
 import { getAuthToken } from "./api";
-import { isSupabaseEnabled, supabase } from "../lib/supabase";
+import { isSupabaseEnabled, publicSupabase, supabase } from "../lib/supabase";
 import {
   AuthUser,
   ContentCreator,
@@ -133,6 +133,28 @@ function requireSupabase() {
     throw new Error("Supabase nao esta configurado para o modulo de criadores.");
   }
   return supabase;
+}
+
+function requirePublicSupabase() {
+  if (!isSupabaseEnabled || !publicSupabase) {
+    throw new Error("Supabase nao esta configurado para o modulo de criadores.");
+  }
+  return publicSupabase;
+}
+
+function creatorServiceError(context: string, error: { message?: string }) {
+  const message = String(error.message || "");
+  if (
+    message.includes("No suitable key") ||
+    message.includes("wrong key type") ||
+    message.toLowerCase().includes("invalid jwt")
+  ) {
+    return new Error(
+      `${context}: a sessao Discord nao foi aceita pelo Supabase. ` +
+        "Configure SUPABASE_JWT_SECRET na API Replit com o Legacy JWT Secret do projeto e entre novamente."
+    );
+  }
+  return new Error(`${context}: ${message || "erro desconhecido"}`);
 }
 
 function readClaims(): JwtClaims {
@@ -324,7 +346,7 @@ function channelPayloadFromLink(data: CreatorChannelPayload) {
 }
 
 async function loadCreatorByDiscordId(discordId: string): Promise<ContentCreator | null> {
-  const client = requireSupabase();
+  const client = requirePublicSupabase();
   const { data, error } = await client
     .from("content_creators")
     .select(CREATOR_SELECT)
@@ -335,8 +357,8 @@ async function loadCreatorByDiscordId(discordId: string): Promise<ContentCreator
 }
 
 export async function getCreators(): Promise<ContentCreator[]> {
-  if (!isSupabaseEnabled || !supabase) return [];
-  const { data, error } = await supabase
+  if (!isSupabaseEnabled || !publicSupabase) return [];
+  const { data, error } = await publicSupabase
     .from("content_creators")
     .select(CREATOR_SELECT)
     .eq("is_active", true)
@@ -354,8 +376,8 @@ export async function getFeaturedCreators(): Promise<ContentCreator[]> {
 }
 
 export async function getLiveCreators(): Promise<CreatorContent[]> {
-  if (!isSupabaseEnabled || !supabase) return [];
-  const { data, error } = await supabase
+  if (!isSupabaseEnabled || !publicSupabase) return [];
+  const { data, error } = await publicSupabase
     .from("creator_content")
     .select(`${CONTENT_COLUMNS}, creator:content_creators(id, display_name, username, avatar_url, banner_url, bio, is_active, is_featured, is_verified, sort_order)`)
     .eq("is_active", true)
@@ -366,8 +388,8 @@ export async function getLiveCreators(): Promise<CreatorContent[]> {
 }
 
 export async function getLatestCreatorContent(): Promise<CreatorContent[]> {
-  if (!isSupabaseEnabled || !supabase) return [];
-  const { data, error } = await supabase
+  if (!isSupabaseEnabled || !publicSupabase) return [];
+  const { data, error } = await publicSupabase
     .from("creator_content")
     .select(`${CONTENT_COLUMNS}, creator:content_creators(id, display_name, username, avatar_url, banner_url, bio, is_active, is_featured, is_verified, sort_order)`)
     .eq("is_active", true)
@@ -378,8 +400,8 @@ export async function getLatestCreatorContent(): Promise<CreatorContent[]> {
 }
 
 export async function getCreatorById(id: string): Promise<ContentCreator | null> {
-  if (!isSupabaseEnabled || !supabase) return null;
-  const { data, error } = await supabase
+  if (!isSupabaseEnabled || !publicSupabase) return null;
+  const { data, error } = await publicSupabase
     .from("content_creators")
     .select(CREATOR_SELECT)
     .eq("id", id)
@@ -417,7 +439,7 @@ export async function registerMyCreatorProfile(user?: AuthUser): Promise<MyCreat
     })
     .select(CREATOR_SELECT)
     .single();
-  if (error) throw new Error(`Falha ao criar perfil de criador: ${error.message}`);
+  if (error) throw creatorServiceError("Falha ao criar perfil de criador", error);
   const creator = rowToCreator(data as CreatorRow);
   return { is_creator: true, creator, channels: creator.channels };
 }
@@ -455,7 +477,7 @@ async function createChannelFromLink(
     ? client.from("creator_channels").update(row).eq("id", existing.id)
     : client.from("creator_channels").insert({ creator_id: creatorId, ...row });
   const { data: saved, error } = await query.select("*").single();
-  if (error) throw new Error(`Falha ao vincular perfil: ${error.message}`);
+  if (error) throw creatorServiceError("Falha ao vincular perfil", error);
   return rowToChannel(saved as ChannelRow);
 }
 
@@ -472,7 +494,7 @@ async function updateChannelFromLink(
     .eq("id", channelId)
     .select("*")
     .single();
-  if (error) throw new Error(`Falha ao atualizar perfil vinculado: ${error.message}`);
+  if (error) throw creatorServiceError("Falha ao atualizar perfil vinculado", error);
   return rowToChannel(saved as ChannelRow);
 }
 
@@ -497,7 +519,7 @@ export async function disableMyCreatorChannel(id: string): Promise<void> {
     .from("creator_channels")
     .update({ is_active: false })
     .eq("id", id);
-  if (error) throw new Error(`Falha ao desativar o canal: ${error.message}`);
+  if (error) throw creatorServiceError("Falha ao desativar o canal", error);
 }
 
 export async function adminGetCreators(): Promise<{
@@ -511,7 +533,7 @@ export async function adminGetCreators(): Promise<{
     .order("is_active", { ascending: false })
     .order("is_featured", { ascending: false })
     .order("sort_order");
-  if (error) throw new Error(`Falha ao carregar gestao de criadores: ${error.message}`);
+  if (error) throw creatorServiceError("Falha ao carregar gestao de criadores", error);
   const creators = (data as CreatorRow[]).map(rowToCreator);
   return { creators, can_manage: readClaims().is_admin === true };
 }
@@ -524,7 +546,7 @@ export async function adminCreateCreator(data: ContentCreatorPayload): Promise<C
     .insert(creatorPayloadToRow(data))
     .select(CREATOR_SELECT)
     .single();
-  if (error) throw new Error(`Falha ao criar criador: ${error.message}`);
+  if (error) throw creatorServiceError("Falha ao criar criador", error);
   return rowToCreator(saved as CreatorRow);
 }
 
@@ -541,7 +563,7 @@ export async function adminUpdateCreator(
     .eq("id", id)
     .select(CREATOR_SELECT)
     .single();
-  if (error) throw new Error(`Falha ao atualizar criador: ${error.message}`);
+  if (error) throw creatorServiceError("Falha ao atualizar criador", error);
   return rowToCreator(saved as CreatorRow);
 }
 
@@ -551,7 +573,7 @@ export async function adminDisableCreator(id: string): Promise<void> {
     .from("content_creators")
     .update({ is_active: false })
     .eq("id", id);
-  if (error) throw new Error(`Falha ao desativar criador: ${error.message}`);
+  if (error) throw creatorServiceError("Falha ao desativar criador", error);
 }
 
 export async function adminAddCreatorChannel(
@@ -571,7 +593,7 @@ export async function adminUpdateCreatorChannel(
     .select("creator_id")
     .eq("id", channelId)
     .single();
-  if (error) throw new Error(`Canal nao encontrado: ${error.message}`);
+  if (error) throw creatorServiceError("Canal nao encontrado", error);
   return updateChannelFromLink(channelId, String(channel.creator_id), data);
 }
 
@@ -581,7 +603,7 @@ export async function adminDisableCreatorChannel(channelId: string): Promise<voi
     .from("creator_channels")
     .update({ is_active: false })
     .eq("id", channelId);
-  if (error) throw new Error(`Falha ao desativar canal: ${error.message}`);
+  if (error) throw creatorServiceError("Falha ao desativar canal", error);
 }
 
 export async function adminCheckCreatorContent(): Promise<Record<string, unknown>> {

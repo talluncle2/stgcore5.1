@@ -83,7 +83,9 @@ Vercel.
 
 Na API Replit, configure `SUPABASE_JWT_SECRET` com o JWT secret legado do mesmo
 projeto Supabase. Depois dessa troca, usuarios com sessao antiga precisam
-entrar novamente para receber um token com as claims de RLS.
+entrar novamente para receber um token com as claims de RLS. Sem essa
+configuracao, as leituras publicas continuam funcionando, mas criacao e edicao
+protegidas pelo Supabase serao recusadas.
 
 ## Endpoints
 
