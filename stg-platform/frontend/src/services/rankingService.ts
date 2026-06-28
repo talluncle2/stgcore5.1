@@ -95,7 +95,7 @@ export async function getRankingItems(): Promise<RankingItem[]> {
     const items = normalize(data);
     if (items.length > 0 && "playerName" in items[0]) return items;
   } catch {
-    // TODO: integrate with Replit API when ranking write model is available.
+    // TODO: remove fallback after the official ranking API has production data.
   }
 
   const local = readContent<RankingItem>(KEY, []);

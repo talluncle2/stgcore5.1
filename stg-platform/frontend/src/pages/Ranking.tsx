@@ -69,7 +69,7 @@ export function Ranking() {
 
         {!API_BASE_URL && (
           <div className="border border-[#f97316]/30 bg-[#f97316]/10 p-3 text-sm font-bold text-[#fed7aa]">
-            Modo demonstracao: configure VITE_API_BASE_URL para carregar o ranking oficial da API Replit.
+            Modo demonstracao: configure a API oficial para carregar o ranking sincronizado.
           </div>
         )}
 

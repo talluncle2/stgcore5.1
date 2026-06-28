@@ -39,7 +39,7 @@ export async function getHomeContentItems(): Promise<HomeContentItem[]> {
     const items = normalize(data);
     if (items.length > 0) return items;
   } catch {
-    // TODO: integrate with Replit API when /public/home is available.
+    // TODO: remove fallback after the official /public/home API has production data.
   }
   return readContent<HomeContentItem>(KEY, defaultHomeItems);
 }

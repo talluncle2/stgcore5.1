@@ -180,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   function loginWithDiscord() {
     if (!API_BASE_URL) {
-      window.alert("VITE_API_BASE_URL nao esta configurado. Configure a URL da API Replit no deploy.");
+      window.alert("API oficial nao esta configurada no deploy.");
       return;
     }
     window.location.href = `${API_BASE_URL}/auth/discord/login`;

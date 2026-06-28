@@ -1,55 +1,83 @@
 # Deploy
 
-## Frontend: Vercel
+## Vercel: frontend + API
 
-Root directory:
-
-```text
-stg-platform/frontend
-```
-
-Comandos:
+Use o root directory:
 
 ```text
-Install Command: npm install
-Build Command: npm run build
-Output Directory: dist
+stg-platform
 ```
 
-Variaveis:
+Comandos configurados em `stg-platform/vercel.json`:
+
+```text
+Install Command: cd frontend && npm install
+Build Command: cd frontend && npm run build
+Output Directory: frontend/dist
+API: api/index.py
+```
+
+O frontend consome a API no mesmo dominio:
 
 ```env
-VITE_API_BASE_URL=https://URL-DA-API-REPLIT
-VITE_DISCORD_INVITE_URL=https://discord.gg/SEU_CONVITE
-VITE_REQUIRE_AUTH=false
-VITE_ALLOWED_HOSTS=
+VITE_API_BASE_URL=/api
 ```
 
-## API: Replit
+Se `VITE_API_BASE_URL` nao for definido, o frontend tambem usa `/api` por padrao.
 
-A API FastAPI e a ponte oficial entre frontend, Supabase e bot. Ela deve expor os endpoints descritos em `docs/API_CONTRACT.md` e configurar CORS para o dominio da Vercel.
+## Secrets da API na Vercel
 
-Secrets ficam no Replit:
+Configure no painel da Vercel, nunca no frontend:
 
-- Supabase URL e service role.
-- Discord OAuth client secret.
-- Token do bot ou credenciais internas.
-- Chaves de APIs externas.
+```env
+DATABASE_URL=postgresql://...
+SUPABASE_URL=https://SEU-PROJETO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=...
+SUPABASE_JWT_SECRET=...
+DISCORD_CLIENT_ID=...
+DISCORD_CLIENT_SECRET=...
+DISCORD_REDIRECT_URI=https://seu-dominio.vercel.app/api/auth/discord/callback
+FRONTEND_URL=https://seu-dominio.vercel.app
+GUILD_ID=...
+ADMIN_ROLE_IDS=...
+MODERATOR_ROLE_IDS=...
+DASHBOARD_ALLOWED_ROLE_IDS=...
+CONTENT_CREATOR_ROLE_IDS=...
+BOT_API_KEY=...
+INTERNAL_SYNC_KEY=...
+```
 
-## Database: Supabase
+## Supabase
 
-O Supabase e acessado pela API Replit. O frontend nao deve usar service role, RPC sensivel ou queries administrativas diretamente.
+Aplicar as migrations em `stg-platform/supabase/migrations/`, incluindo:
+
+```text
+20260628000009_vercel_api_content.sql
+```
+
+O frontend pode usar a publishable key do Supabase para tabelas protegidas por RLS. Service role e JWT secret ficam apenas na API da Vercel.
 
 ## Bot: Discloud
 
-O bot Discord roda na Discloud e sincroniza dados com a API Replit. O frontend consulta status, guild, membros, cargos, canais e eventos somente pela API Replit.
+O bot deve enviar dados para:
+
+```text
+https://seu-dominio.vercel.app/api/bot/sync/*
+```
+
+Header obrigatorio:
+
+```text
+X-BOT-API-KEY: valor-de-BOT_API_KEY
+```
 
 ## Checklist
 
 1. `npm install`
 2. `npm run typecheck`
-3. `npm run lint`
-4. `npm run build`
-5. Configurar `VITE_API_BASE_URL` na Vercel.
-6. Confirmar `/health` da API Replit.
-7. Testar login Discord e `/auth/me`.
+3. `npm run build`
+4. Aplicar migrations no Supabase.
+5. Configurar secrets da API na Vercel.
+6. Confirmar `/api/health`.
+7. Testar login Discord e `/api/auth/me`.
+8. Atualizar o bot para chamar `/api/bot/sync/*`.

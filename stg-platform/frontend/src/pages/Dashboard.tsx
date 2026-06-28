@@ -86,28 +86,28 @@ export function Dashboard() {
 
     if (statusResult.status === "fulfilled") {
       setBotStatus(statusResult.value as BotStatus | null);
-      if (!statusResult.value) warnings.status = "Endpoint nao disponivel na API do Replit: /admin/discord/status";
+      if (!statusResult.value) warnings.status = "Endpoint nao disponivel na API oficial: /admin/discord/status";
     } else {
-      warnings.status = statusResult.reason instanceof ApiError ? statusResult.reason.message : "Endpoint nao disponivel na API do Replit: /admin/discord/status";
+      warnings.status = statusResult.reason instanceof ApiError ? statusResult.reason.message : "Endpoint nao disponivel na API oficial: /admin/discord/status";
     }
 
     if (guildResult.status === "fulfilled") {
       setGuild(guildResult.value as GuildInfo | null);
-      if (!guildResult.value) warnings.guild = "Endpoint nao disponivel na API do Replit: /admin/discord/guild";
+      if (!guildResult.value) warnings.guild = "Endpoint nao disponivel na API oficial: /admin/discord/guild";
     } else {
-      warnings.guild = guildResult.reason instanceof ApiError ? guildResult.reason.message : "Endpoint nao disponivel na API do Replit: /admin/discord/guild";
+      warnings.guild = guildResult.reason instanceof ApiError ? guildResult.reason.message : "Endpoint nao disponivel na API oficial: /admin/discord/guild";
     }
 
     if (metricsResult.status === "fulfilled") {
       setMetricsCount(metricsResult.value?.metrics?.length ?? 0);
-      if (!metricsResult.value) warnings.metrics = "Endpoint nao disponivel na API do Replit: /admin/discord/metrics";
+      if (!metricsResult.value) warnings.metrics = "Endpoint nao disponivel na API oficial: /admin/discord/metrics";
     } else {
-      warnings.metrics = metricsResult.reason instanceof ApiError ? metricsResult.reason.message : "Endpoint nao disponivel na API do Replit: /admin/discord/metrics";
+      warnings.metrics = metricsResult.reason instanceof ApiError ? metricsResult.reason.message : "Endpoint nao disponivel na API oficial: /admin/discord/metrics";
     }
 
     setEndpointWarnings(warnings);
     if (Object.keys(warnings).length > 0) {
-      setError("Alguns cards administrativos dependem de endpoints ainda nao disponiveis na API do Replit.");
+      setError("Alguns cards administrativos dependem de endpoints ainda nao disponiveis na API oficial.");
     }
     setRefreshing(false);
     setLoading(false);

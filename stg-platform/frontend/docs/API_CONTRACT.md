@@ -80,7 +80,7 @@ Campos aceitos para permissoes: `is_admin`, `is_moderator`, `is_staff`, `can_acc
 - `GET /admin/discord/channels`
 - `GET /admin/discord/events`
 
-Se um endpoint ainda nao existir, retornar 404. O frontend exibira: `Endpoint ainda nao disponivel na API do Replit: /admin/...`.
+Se um endpoint ainda nao existir, retornar 404. O frontend exibira: `Endpoint ainda nao disponivel na API oficial: /admin/...`.
 
 ## Moderacao
 

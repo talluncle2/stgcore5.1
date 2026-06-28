@@ -150,7 +150,7 @@ export function AdminCreators() {
             {canManage ? "Supabase direto" : "Somente leitura"}
           </SettingsStatusBadge>
           <p className="mt-3 text-sm text-[#94a3b8]">
-            Os links sao validados no site. Nenhuma rota de criadores do Replit e utilizada.
+            Os links sao validados no site. Nenhuma rota externa de criadores e utilizada.
           </p>
         </div>
       </div>

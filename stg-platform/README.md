@@ -1,10 +1,11 @@
 # STG | Supremo Tribunal Gamer
 
-Projeto organizado em tres partes independentes:
+Projeto organizado para rodar o site e a API no mesmo deploy Vercel:
 
 - `frontend/`: React + Vite.
-- `backend/`: API FastAPI.
-- `bot/`: bot Discord.
+- `api/`: API FastAPI serverless para Vercel.
+- `backend/`: API FastAPI legada/local de transicao.
+- `supabase/`: migrations do banco.
 - `docs/`: documentacao, relatorios e arquivos auxiliares.
 
 ## Frontend
@@ -32,19 +33,22 @@ npm run preview
 Configure `frontend/.env`:
 
 ```env
-VITE_API_BASE_URL=https://URL-DA-SUA-API-REPLIT
+VITE_API_BASE_URL=/api
 VITE_REQUIRE_AUTH=false
 ```
 
 ## API
 
+Em producao, a API roda como Vercel Function em `api/index.py`.
+
+Para testar localmente:
+
 ```bash
-cd backend
 pip install -r requirements.txt
-python -m uvicorn core.main:app --host 0.0.0.0 --port 8000
+python -m uvicorn api.index:app --host 0.0.0.0 --port 8000
 ```
 
-Configure `backend/.env` a partir de `backend/.env.example`.
+Configure os secrets no painel da Vercel conforme `.env.example`.
 
 ## Bot
 
@@ -58,18 +62,15 @@ Configure `bot/.env`:
 
 ```env
 DISCORD_BOT_TOKEN=
-API_BASE_URL=http://127.0.0.1:8000
+API_BASE_URL=https://seu-dominio.vercel.app/api
 BOT_API_KEY=
 GUILD_ID=
 OPENROUTER_API_KEY=
 OPENROUTER_MODEL=openrouter/auto
 ```
 
-Se bot e API estiverem no mesmo Replit, `API_BASE_URL` pode ser `http://127.0.0.1:8000`.
-Se o bot estiver separado da API, use a URL publica da API Replit.
-
 ## Observacoes
 
-O frontend deve consumir a API via `VITE_API_BASE_URL`.
+O frontend deve consumir a API via `/api` no mesmo dominio da Vercel.
 O bot deve consumir a API via `API_BASE_URL` e `BOT_API_KEY`.
-Secrets reais devem ficar apenas em arquivos `.env` locais ou secrets do Replit.
+Secrets reais devem ficar apenas em arquivos `.env` locais ou secrets da Vercel/Discloud.

@@ -141,7 +141,7 @@ export async function getNewsItems(): Promise<NewsItem[]> {
     const items = normalize(data);
     if (items.length > 0) return items;
   } catch {
-    // TODO: integrate with Replit API when /public/news is available.
+    // TODO: remove fallback after the official /public/news API has production data.
   }
   return readContent<NewsItem>(KEY, defaultNewsItems);
 }

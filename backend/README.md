@@ -1,13 +1,13 @@
-# STG Core API
+# STG Core API legado
 
-FastAPI backend for STG Warzone platform. Handles Discord OAuth authentication, bot sync data, and admin dashboard.
+FastAPI backend local/de transicao for STG Warzone platform. The production API for GitHub/Vercel now lives in `stg-platform/api/index.py` and is deployed as `/api/*`.
 
 ## Architecture
 
 ```
 Frontend (Vercel)
     ↓
-STG Core API (Replit/FastAPI)
+STG Core API (Vercel FastAPI)
     ↓
 Supabase (PostgreSQL)
     
@@ -49,8 +49,8 @@ Or use SQLAlchemy auto-creation (tables will be created on first run).
 # Development
 python -m uvicorn core.main:app --reload --host 0.0.0.0 --port 8000
 
-# Production (via Replit)
-python run.py
+# Production
+# Use the Vercel API in stg-platform/api/index.py.
 ```
 
 ## API Endpoints
@@ -95,7 +95,7 @@ python run.py
 - `POST /creators/me/sync` - Force profile/content sync for the authenticated creator
 - `POST /internal/creators/check-content` - Internal scheduled sync using `X-Internal-Sync-Key` or `X-Bot-API-Key`
 
-Creator sync uses server-side platform APIs. Configure these secrets in Replit:
+Creator sync uses server-side platform APIs. Configure these secrets in the server-side runtime:
 
 ```env
 YOUTUBE_API_KEY=...
@@ -130,7 +130,7 @@ See `../supabase/migrations/20260527000001_create_discord_tables.sql` for schema
 ### Data Persistence
 - Supabase is the single source of truth
 - No local JSON file dependency
-- Restarting Replit doesn't lose data
+- Restarting the API runtime doesn't lose data
 - API can be scaled horizontally
 
 ## Security

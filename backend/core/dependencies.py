@@ -4,7 +4,7 @@ from typing import Optional
 import secrets
 import jwt
 from fastapi import Depends, HTTPException, status, Header
-from fastapi.security import HTTPBearer, HTTPAuthCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from core.config import get_settings
 from core.database import get_db
@@ -63,7 +63,7 @@ def verify_bot_api_key(x_bot_api_key: str = Header(...)) -> bool:
     return True
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthCredentials] = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ) -> AuthUser:
     """Get current authenticated user from JWT token"""
@@ -135,7 +135,7 @@ async def get_current_user(
     return auth_user
 
 async def get_current_user_optional(
-    credentials: Optional[HTTPAuthCredentials] = Depends(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: Session = Depends(get_db)
 ) -> Optional[AuthUser]:
     """Get current user if authenticated, otherwise None"""

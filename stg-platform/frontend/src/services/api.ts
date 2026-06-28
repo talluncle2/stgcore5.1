@@ -9,7 +9,7 @@ import type {
 const rawApiBaseUrl = import.meta.env.VITE_API_BASE_URL;
 const API_BASE_URL = rawApiBaseUrl
   ? String(rawApiBaseUrl).replace(/\/$/, "")
-  : "";
+  : "/api";
 const AUTH_TOKEN_KEY = "stg_auth_token";
 const LEGACY_AUTH_TOKEN_KEYS = ["stg_token", "token", "authToken"];
 
@@ -70,8 +70,8 @@ function normalizeApiResponse<T>(payload: unknown): T {
 function endpointUnavailableMessage(path: string, status?: number): string {
   if (status === 401) return "Sessao expirada ou token invalido. Faca login novamente.";
   if (status === 403) return "Sem permissao para executar esta acao.";
-  if (status === 404) return `Endpoint ainda nao disponivel na API do Replit: ${path}`;
-  if (status && status >= 500) return "API do Replit indisponivel no momento.";
+  if (status === 404) return `Endpoint ainda nao disponivel na API oficial: ${path}`;
+  if (status && status >= 500) return "API oficial indisponivel no momento.";
   return "Nao foi possivel sincronizar com a API.";
 }
 
@@ -116,7 +116,7 @@ async function fetchJson<T>(path: string, init?: RequestInit, fallback?: T): Pro
 
 export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
   if (!API_BASE_URL) {
-    throw new ApiError("VITE_API_BASE_URL nao esta configurado. Configure a URL da API oficial no Vercel.", undefined, path);
+    throw new ApiError("API oficial nao esta configurada.", undefined, path);
   }
 
   try {
@@ -142,7 +142,7 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     return normalizeApiResponse<T>(await response.json());
   } catch (error) {
     if (error instanceof ApiError) throw error;
-    throw new ApiError("API do Replit offline ou sem resposta.", undefined, path);
+    throw new ApiError("API oficial offline ou sem resposta.", undefined, path);
   }
 }
 
@@ -162,7 +162,7 @@ export async function authedApiRequest<T>(path: string, init?: RequestInit): Pro
 }
 
 export function adminEndpointUnavailable(path: string): ApiError {
-  return new ApiError(`Endpoint ainda nao disponivel na API do Replit: ${path}`, 404, path);
+  return new ApiError(`Endpoint ainda nao disponivel na API oficial: ${path}`, 404, path);
 }
 
 export function classifyApiError(error: unknown): DataSourceStatus {

@@ -318,7 +318,7 @@ function MembersTab() {
         icon={Users}
         eyebrow="Usuarios e comunidade"
         title="Gestao de Membros"
-        description="Centraliza membros sincronizados pela API segura. Edicao real depende dos endpoints administrativos do Replit."
+        description="Centraliza membros sincronizados pela API segura. Edicao real depende dos endpoints administrativos oficiais."
         action={
           <button
             type="button"
@@ -517,7 +517,7 @@ function ApiTab() {
         icon={Server}
         eyebrow="Infraestrutura"
         title="Gestao de API"
-        description="Diagnostico da API Replit consumida por VITE_API_BASE_URL. Tokens e secrets nao sao exibidos nem editados."
+        description="Diagnostico da API oficial consumida pelo frontend. Tokens e secrets nao sao exibidos nem editados."
         action={
           <button type="button" onClick={() => void runChecks()} disabled={status === "loading"} className="stg-button-primary inline-flex items-center gap-2 disabled:opacity-60">
             <RefreshCw size={16} className={status === "loading" ? "animate-spin" : ""} />
@@ -683,7 +683,7 @@ function AdminCentralTab() {
     { title: "Criadores", description: "Canais, lives e conteudo de criadores STG.", icon: Video, to: "/configuracoes?tab=criadores", tone: "blue" as const, status: "Criadores" },
     { title: "Membros", description: "Usuarios sincronizados, cargos e permissoes.", icon: Users, to: "/configuracoes?tab=membros", tone: "green" as const, status: "Discord" },
     { title: "Cargos", description: "Roles sincronizadas e leitura operacional.", icon: ShieldCheck, to: "/configuracoes?tab=cargos", tone: "purple" as const, status: "Roles" },
-    { title: "API", description: "Diagnosticos da API oficial hospedada no Replit.", icon: Server, to: "/configuracoes?tab=api", tone: apiStatus === "online" ? "green" as const : "red" as const, status: loadingStatus ? "Validando" : apiStatus },
+    { title: "API", description: "Diagnosticos da API oficial hospedada junto ao frontend.", icon: Server, to: "/configuracoes?tab=api", tone: apiStatus === "online" ? "green" as const : "red" as const, status: loadingStatus ? "Validando" : apiStatus },
     { title: "Bot", description: "Status do bot Discloud e sincronizacao Discord.", icon: Bot, to: "/configuracoes?tab=bot", tone: botStatus === "online" ? "green" as const : botStatus === "offline" ? "red" as const : "orange" as const, status: loadingStatus ? "Validando" : botStatus === "unavailable" ? "Endpoint indisponivel" : botStatus },
     { title: "Moderacao", description: "Punicoes, regras e configuracoes de moderacao.", icon: Shield, to: "/moderation", tone: "orange" as const, status: "Restrito" },
     { title: "Diagnosticos", description: "Saude da API, contratos e verificacoes de integracao.", icon: Gauge, to: "/configuracoes?tab=api", tone: apiStatus === "online" ? "green" as const : "red" as const, status: "Sistema" },
@@ -695,7 +695,7 @@ function AdminCentralTab() {
         icon={Shield}
         eyebrow="Comando central"
         title="Central Admin"
-        description="Acesso absoluto as areas administrativas do STG. Conteudo usa Supabase; Discord e bot continuam pela API Replit."
+        description="Acesso absoluto as areas administrativas do STG. Conteudo usa Supabase; Discord e bot continuam pela API oficial."
       />
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -703,7 +703,7 @@ function AdminCentralTab() {
           <SettingsStatusBadge tone={apiStatus === "online" ? "green" : "red"}>
             API {loadingStatus ? "validando" : apiStatus}
           </SettingsStatusBadge>
-          <p className="mt-3 text-sm text-[#94a3b8]">Fonte oficial: Replit conectado ao Supabase.</p>
+          <p className="mt-3 text-sm text-[#94a3b8]">Fonte oficial: API Vercel conectada ao Supabase.</p>
         </SettingsSectionCard>
         <SettingsSectionCard>
           <SettingsStatusBadge tone={botStatus === "online" ? "green" : botStatus === "offline" ? "red" : "orange"}>
@@ -719,7 +719,7 @@ function AdminCentralTab() {
 
       {apiStatus === "offline" && !loadingStatus && (
         <div className="border border-[#f97316]/35 bg-[#f97316]/10 p-4 text-sm font-bold text-[#fed7aa]">
-          API offline ou nao configurada. O painel continua navegavel, mas salvamentos administrativos exigem confirmacao da API Replit.
+          API offline ou nao configurada. O painel continua navegavel, mas salvamentos administrativos exigem confirmacao da API oficial.
         </div>
       )}
 

@@ -982,7 +982,7 @@ export function Profile() {
                       )}
                     </div>
                   </div>
-                  <p className="px-5 pb-4 text-[10px] text-slate-600">YouTube, Twitch, Kick e TikTok sao detectados automaticamente. O navegador valida o perfil sem usar a API Replit.</p>
+                  <p className="px-5 pb-4 text-[10px] text-slate-600">YouTube, Twitch, Kick e TikTok sao detectados automaticamente. O navegador valida o perfil sem usar API externa de criadores.</p>
                 </HudPanel>
               </form>
             )}

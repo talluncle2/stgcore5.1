@@ -151,7 +151,7 @@ function creatorServiceError(context: string, error: { message?: string }) {
   ) {
     return new Error(
       `${context}: a sessao Discord nao foi aceita pelo Supabase. ` +
-        "Configure SUPABASE_JWT_SECRET na API Replit com o Legacy JWT Secret do projeto e entre novamente."
+        "Configure SUPABASE_JWT_SECRET na API oficial com o Legacy JWT Secret do projeto e entre novamente."
     );
   }
   return new Error(`${context}: ${message || "erro desconhecido"}`);

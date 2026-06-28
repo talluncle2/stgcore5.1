@@ -6,7 +6,7 @@ Frontend React/Vite do STG | Supremo Tribunal Gamer.
 
 - `src/pages`: telas publicas, perfil, dashboard e configuracoes.
 - `src/components`: layout, UI, cards e componentes administrativos.
-- `src/context/AuthContext.tsx`: sessao Discord baseada no token da API Replit.
+- `src/context/AuthContext.tsx`: sessao Discord baseada no token da API oficial.
 - `src/services`: acesso ao Supabase para conteudo e clientes HTTP para Discord/bot.
 - `src/utils`: permissoes e validacao de URLs.
 - `docs`: contrato da API e guia de deploy.
@@ -18,7 +18,7 @@ Loja, torneios, operacoes Warzone e perfis de criadores usam Supabase PostgREST 
 `VITE_SUPABASE_ANON_KEY` para compatibilidade). Escritas sao protegidas por RLS
 e pelas claims do token emitido no login Discord.
 
-A API Replit continua responsavel por login, validacao de cargos do Discord,
+API Vercel em `/api` e responsavel por login, validacao de cargos do Discord,
 sincronizacao do bot e dados administrativos do Discord. O frontend nunca usa
 `service_role`, tokens do bot ou secrets de provedores.
 
@@ -54,7 +54,7 @@ npm run build
 Crie `.env` local a partir de `.env.example`:
 
 ```env
-VITE_API_BASE_URL=https://URL-DA-API-REPLIT
+VITE_API_BASE_URL=/api
 VITE_SUPABASE_URL=https://SEU-PROJETO.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_EXEMPLO
 VITE_SUPABASE_ANON_KEY=sua_chave_anon_publica
@@ -70,18 +70,17 @@ Nao coloque secrets no frontend.
 Configure o projeto na Vercel com:
 
 ```text
-Root Directory: stg-platform/frontend
+Root Directory: stg-platform
 Framework Preset: Vite
-Install Command: npm install
-Build Command: npm run build
-Output Directory: dist
+Install Command: cd frontend && npm install
+Build Command: cd frontend && npm run build
+Output Directory: frontend/dist
 ```
 
-Configure `VITE_API_BASE_URL` apontando para a API do Replit e as duas
-variaveis publicas do Supabase. Nunca configure `SUPABASE_SERVICE_ROLE_KEY` na
-Vercel.
+Configure `VITE_API_BASE_URL=/api` e as variaveis publicas do Supabase. Secrets
+da API devem ficar no painel da Vercel sem prefixo `VITE_`.
 
-Na API Replit, configure `SUPABASE_JWT_SECRET` com o JWT secret legado do mesmo
+Na API Vercel, configure `SUPABASE_JWT_SECRET` com o JWT secret legado do mesmo
 projeto Supabase. Depois dessa troca, usuarios com sessao antiga precisam
 entrar novamente para receber um token com as claims de RLS. Sem essa
 configuracao, as leituras publicas continuam funcionando, mas criacao e edicao
